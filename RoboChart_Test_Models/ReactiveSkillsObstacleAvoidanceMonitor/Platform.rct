@@ -1,0 +1,20 @@
+package Platform
+
+import Types::* 
+
+
+
+
+
+
+
+ robotic platform Platform {
+	
+	
+	uses IMovePlatformActuation
+	uses IProximityPlatformActuation
+	uses IMovePlatformSensing
+	uses IProximityPlatformSensing
+
+} 
+

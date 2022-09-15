@@ -1,0 +1,21 @@
+package ReactiveSkillsObstacleAvoidance
+
+import Types::* 
+import Platform::* 
+import Control::* 
+
+
+
+ module ReactiveSkillsObstacleAvoidance {
+	
+	 cref Control = Control
+
+	 rref Platform = Platform
+
+	
+	
+		 
+}
+
+
+

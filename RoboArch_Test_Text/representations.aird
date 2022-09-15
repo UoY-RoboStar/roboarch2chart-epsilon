@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<viewpoint:DAnalysis xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:viewpoint="http://www.eclipse.org/sirius/1.1.0" uid="_0v0EEKdjEeuhefSIAO_osA" version="14.5.0.202104161500">
+  <semanticResources>EmptyControlLayer.rac</semanticResources>
+  <semanticResources>ReactiveSkillsMinimal.rac</semanticResources>
+  <semanticResources>ReactiveSkillsObstacleAvoidance.rac</semanticResources>
+  <semanticResources>ReactiveSkillsObstacleAvoidanceMonitor.rac</semanticResources>
+  <semanticResources>ThreeEmptyLayers.rac</semanticResources>
+  <semanticResources>platform:/plugin/circus.robocalc.robochart.textual/lib/robochart/core.rct</semanticResources>
+  <semanticResources>test.rac</semanticResources>
+</viewpoint:DAnalysis>

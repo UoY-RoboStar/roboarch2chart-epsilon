@@ -1,0 +1,73 @@
+package maildelivery::ctl 
+
+import maildelivery::types::*
+ 
+import maildelivery::ctl::move::*
+import maildelivery::ctl::colourvision::*
+import maildelivery::ctl::proximity::*
+import maildelivery::ctl::movetolocation::*
+import maildelivery::ctl::determinelocation::*
+import maildelivery::ctl::skillsmanager::*
+
+
+controller Ctl {
+uses PointCloud uses ColourPointCloud requires Base requires Audio event destination : Coordinate
+	event doorToFind : nat
+	event getLocation
+	event speak : string
+	event location : Coordinate
+	event destinationReached
+	event doorFound
+	event mailPickedUp
+	
+	sref SkillsManager = SkillsManager
+	
+	sref Move = Move
+	
+	sref ColourVision = ColourVision
+	
+	sref Proximity = Proximity
+	
+	sref MoveToLocation = MoveToLocation
+	
+	sref DetermineLocation = DetermineLocation
+	
+	
+connection SkillsManager on activateMove to Move on activateMove
+	connection SkillsManager on executeMove to Move on executeMove
+	connection SkillsManager on deactivateMove to Move on deactivateMove
+	connection Move on completeMove to SkillsManager on completeMove
+	connection SkillsManager on movePriorityParam to Move on movePriorityParam
+	connection SkillsManager on moveVelocity to Move on moveVelocity
+	connection SkillsManager on activateColourVision to ColourVision on activateColourVision
+	connection SkillsManager on executeColourVision to ColourVision on executeColourVision
+	connection ColourVision on completeColourVision to SkillsManager on completeColourVision
+	connection Proximity on completeProximity to SkillsManager on completeProximity
+	connection MoveToLocation on completeMoveToLocation to SkillsManager on completeMoveToLocation
+	connection DetermineLocation on completeDetermineLocation to SkillsManager on completeDetermineLocation
+	connection DetermineLocation on determineLocationLocation to SkillsManager on determineLocationLocation
+	connection MoveToLocation on moveToLocationVelocity to SkillsManager on moveToLocationVelocity
+	connection Proximity on proximityEnvPoints to SkillsManager on proximityEnvPoints
+	connection ColourVision on colourVisionEnvColourPoints to SkillsManager on colourVisionEnvColourPoints
+	connection SkillsManager on deactivateColourVision to ColourVision on deactivateColourVision
+	connection SkillsManager on colourVisionPriorityParam to ColourVision on colourVisionPriorityParam
+	connection SkillsManager on activateProximity to Proximity on activateProximity
+	connection SkillsManager on executeProximity to Proximity on executeProximity
+	connection SkillsManager on deactivateProximity to Proximity on deactivateProximity
+	connection SkillsManager on proximityPriorityParam to Proximity on proximityPriorityParam
+	connection SkillsManager on activateMoveToLocation to MoveToLocation on activateMoveToLocation
+	connection SkillsManager on executeMoveToLocation to MoveToLocation on executeMoveToLocation
+	connection SkillsManager on deactivateMoveToLocation to MoveToLocation on deactivateMoveToLocation
+	connection SkillsManager on moveToLocationTargetParam to MoveToLocation on moveToLocationTargetParam
+	connection SkillsManager on moveToLocationPriorityParam to MoveToLocation on moveToLocationPriorityParam
+	connection SkillsManager on moveToLocationCurrent to MoveToLocation on moveToLocationCurrent
+	connection SkillsManager on moveToLocationHazards to MoveToLocation on moveToLocationHazards
+	connection SkillsManager on activateDetermineLocation to DetermineLocation on activateDetermineLocation
+	connection SkillsManager on executeDetermineLocation to DetermineLocation on executeDetermineLocation
+	connection SkillsManager on deactivateDetermineLocation to DetermineLocation on deactivateDetermineLocation
+	connection SkillsManager on determineLocationPriorityParam to DetermineLocation on determineLocationPriorityParam
+	connection SkillsManager on determineLocationImage to DetermineLocation on determineLocationImage
+	connection Ctl on envPoints to Proximity on platformEnvPoints
+	connection Ctl on envColourPoints to ColourVision on platformEnvColourPoints
+}
+

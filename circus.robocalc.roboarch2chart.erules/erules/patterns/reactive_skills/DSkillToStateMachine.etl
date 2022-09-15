@@ -1,0 +1,379 @@
+/********************************************************************************
+ * Copyright (c) 2022 University of York and others
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0.
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ *
+ * Contributors:
+ *   William Barnett - initial definition
+ ********************************************************************************/
+
+import "SkillToStateMachine.etl";
+
+import "../../common/RA2RC-Functions.eol";
+import "../../common/RoboChart.eol";
+
+@lazy
+rule DSkillToStateMachine
+	transform amdsk: RoboArch!DSkill
+	to rcdsmref: RoboChart!StateMachineRef
+	extends SkillToStateMachine{
+
+		printDebug("Start - DSkill " + amdsk.name);
+
+		var rcdsm = rcdsmref.ref;
+
+		//Name set by abstract rule SkillToStateMachine
+
+		rcdsm.interfaces.add ( amdsk.equivalent("DSkillToPlatformActuationInterface") );
+
+		//Interface set by abstract rule SkillToStateMachine
+
+		rcdsm.interfaces.add( amdsk.equivalent("DSkillToPlatformSensingInterface") );
+
+		var skillInterface = ref(InterfacePrefix() + amdsk.name, RoboChart!Interface);
+		var platformEvents = ref( DSkillPlatformActuationInterface(amdsk.name) , RoboChart!Interface).events;
+		platformEvents.addAll( ref( DSkillPlatformSensingInterface(amdsk.name) , RoboChart!Interface).events );
+
+
+	/*******************
+    *  Variables
+	*******************/
+
+	// Variables to hold input values
+	var variables = new RoboChart!VariableList;
+
+	for (param: RoboArch!Variable in amdsk.parameters){
+		var name = param.name + ParameterPostfix();
+		var type = param.type;
+		variables.vars.add( CreateRCVariable(name, type) );
+	}
+
+	for (sdt: RoboArch!Variable in amdsk.outputs){
+		var name = sdt.name;
+		var type = sdt.type;
+		variables.vars.add( CreateRCVariable(name, type) );
+	}
+
+	for (act: RoboArch!Variable in amdsk.inputs){
+		var name = act.name;
+		var type = act.type;
+		variables.vars.add( CreateRCVariable(name, type) );
+	}
+
+
+	// Variables for initialisation guard flags
+	var initialisationGuardFlags = Set{};
+	for (param: RoboArch!Variable in amdsk.parameters){
+		var name = param.name + ParameterPostfix() + ParameterInitialisationPostfix();
+		var type =  ref("boolean", RoboChartLib_Core!PrimitiveType) ;
+		var value = CreateRCExpression(false);
+		initialisationGuardFlags.add( CreateRCVariable(name, type, value) );
+	}
+	variables.vars.addAll(initialisationGuardFlags);
+
+
+	// Variables for outputs receive guard flags
+	var outputsGuardFlags = Set{};
+	for (sdt: RoboArch!Variable in amdsk.outputs){
+		var name = DSkillSenseGuardConditionName(sdt.name);
+		var type =  ref("boolean", RoboChartLib_Core!PrimitiveType) ;
+		var value = CreateRCExpression(false);
+		outputsGuardFlags.add( CreateRCVariable(name, type, value) );
+	}
+	variables.vars.addAll(outputsGuardFlags);
+
+
+	rcdsm.variableList.add(variables);
+
+   /*******************
+    *  States
+	*******************/
+
+	var initialJunction = new RoboChart!Initial;
+	initialJunction.name = "Initial";
+
+	rcdsm.nodes.add( initialJunction );
+
+
+	//Initialise
+	var initialiseState = new RoboChart!State;
+	initialiseState.name = "Initialise";
+
+	rcdsm.nodes.add( initialiseState );
+
+
+	//Deactivated
+	var deactivatedState = new RoboChart!State;
+	deactivatedState.name = "Deactivated";
+
+	rcdsm.nodes.add( deactivatedState );
+
+
+	//Startup
+	var startupState = new RoboChart!State;
+	startupState.name = "Startup";
+
+	rcdsm.nodes.add( startupState );
+
+
+	//Ready
+	var readyState = new RoboChart!State;
+	readyState.name = "Ready";
+
+	rcdsm.nodes.add( readyState );
+
+
+	//HandleInputs
+	var handleinputsState = new RoboChart!State;
+	handleinputsState.name = "HandleInputs";
+
+	if (amdsk.inputs.size > 0) {
+		var sendActuationCommand: Sequence(RoboChart!Statement);
+
+		for (act: RoboArch!Variable in amdsk.inputs){
+			var sendTrigger = new RoboChart!Trigger;
+			sendTrigger._type = TriggerType#OUTPUT;
+			sendTrigger.event = skillInterface.events.select( ev | ev.name = SkillEventName(amdsk.name, act.name) ).unique();
+			sendTrigger.parameter =  variables.vars.select( v | v.name = SkillVariableName(act.name) ).unique();
+
+			sendActuationCommand.add( CreateRCSendEvent(sendTrigger) );
+		}
+
+		var sendActuationCommandAction: RoboChart!Action;
+
+		printDebug("statements: " + sendActuationCommand.asString() );
+		if (sendActuationCommand.size() = 1){
+			sendActuationCommandAction = CreateRCEntryAction( sendActuationCommand.unique() );
+
+		} else { // More than 1 actuation command
+			sendActuationCommandAction = CreateRCEntryAction( CreateRCSeqStatement(sendActuationCommand) );
+
+		}
+
+		handleinputsState.actions.add( sendActuationCommandAction) ;
+	}
+
+	rcdsm.nodes.add( handleinputsState );
+
+	//HandleOutputs
+	var handleoutputsState = new RoboChart!State;
+	handleoutputsState.name = "HandleOutputs";
+
+	rcdsm.nodes.add( handleoutputsState );
+
+
+	//Cleanup
+	var cleanupState = new RoboChart!State;
+	cleanupState.name = "Cleanup";
+
+	rcdsm.nodes.add( cleanupState );
+
+
+
+   /*******************
+    *  Transitions
+	*******************/
+	var initialToInitialise = new RoboChart!Transition;
+	initialToInitialise.name = "InitialToInitialise";
+	initialToInitialise.source = initialJunction;
+	initialToInitialise.target = initialiseState;
+	rcdsm.transitions.add( initialToInitialise );
+
+	printDebug("$$$  guardLoop: " + initialisationGuardFlags.asString() );
+
+	var initGuardExpression;
+	if (initialisationGuardFlags.size() = 1){
+		//Only a single flag so use it as the guard
+		initGuardExpression = CreateRCRefExp( initialisationGuardFlags.unique() );
+
+	} else if (initialisationGuardFlags.size() > 1){
+		//Create an expression that ands all of the flags together
+
+		initGuardExpression = AndExp( initialisationGuardFlags.asSequence() );
+
+	} else {
+		//Having no guards will not happen since there will always be at least a priority parameter.
+	}
+
+
+	var initialiseToDeactivated = new RoboChart!Transition;
+	initialiseToDeactivated.name = "InitialiseToDeactivated";
+	initialiseToDeactivated.source = initialiseState;
+	initialiseToDeactivated.target = deactivatedState;
+	initialiseToDeactivated.condition = initGuardExpression;
+	rcdsm.transitions.add( initialiseToDeactivated );
+
+	var deactivatedToStartup = new RoboChart!Transition;
+	deactivatedToStartup.name = "DeactivatedToStartup";
+	deactivatedToStartup.source = deactivatedState;
+	deactivatedToStartup.target = startupState;
+		var activateTrigger = new RoboChart!Trigger;
+		activateTrigger._type = TriggerType#SIMPLE;
+		activateTrigger.event = skillInterface.events.select( ev | ev.name.startsWith("activate") ).unique();
+	deactivatedToStartup.trigger = activateTrigger;
+	rcdsm.transitions.add( deactivatedToStartup );
+
+	var startupToReady = new RoboChart!Transition;
+	startupToReady.name = "StartupToReady";
+	startupToReady.source = startupState;
+	startupToReady.target = readyState;
+	rcdsm.transitions.add( startupToReady );
+
+	var readyToHandleInputs = new RoboChart!Transition;
+	readyToHandleInputs.name = "ReadyToHandleInputs";
+	readyToHandleInputs.source = readyState;
+	readyToHandleInputs.target = handleinputsState;
+		var executeTrigger = new RoboChart!Trigger;
+		executeTrigger._type = TriggerType#SIMPLE;
+		executeTrigger.event = skillInterface.events.select( ev | ev.name.startsWith("execute") ).unique();
+	readyToHandleInputs.trigger = executeTrigger;
+	rcdsm.transitions.add( readyToHandleInputs );
+
+	var handleInputsToHandleOutputs = new RoboChart!Transition;
+	handleInputsToHandleOutputs.name = "HandleInputsToHandleOutputs";
+	handleInputsToHandleOutputs.source = handleinputsState;
+	handleInputsToHandleOutputs.target = handleoutputsState;
+	rcdsm.transitions.add( handleInputsToHandleOutputs );
+
+	var receiveOutputsGuard;
+	if (amdsk.outputs.size() = 1){
+		//Only a single outputs so use it as the guard
+		receiveOutputsGuard = CreateRCNeg( CreateRCRefExp(outputsGuardFlags.unique()) );
+
+	} else if (amdsk.outputs.size() > 1){
+		//Create an expression that ands all of the outputs flags together
+		var negGuardFlags = outputsGuardFlags.collect( f | CreateRCNeg(CreateRCRefExp(f)) );
+		receiveOutputsGuard = AndExp( negGuardFlags.asSequence() );
+
+	} else {
+		//Having no guards will not happen since there will always be at least a priority parameter.
+	}
+
+	var handleOutputsToReady = new RoboChart!Transition;
+	handleOutputsToReady.name = "HandleOutputsToReady";
+	handleOutputsToReady.source = handleoutputsState;
+	handleOutputsToReady.target = readyState;
+	handleOutputsToReady.condition = receiveOutputsGuard;
+		var completeStatement = new RoboChart!SendEvent;
+		var completeTrigger = new RoboChart!Trigger;
+		completeTrigger._type = TriggerType#SIMPLE;
+		completeTrigger.event = skillInterface.events.select( ev | ev.name.startsWith("complete") ).unique();
+		completeStatement.trigger = completeTrigger;
+	handleOutputsToReady.action = completeStatement;
+	rcdsm.transitions.add( handleOutputsToReady );
+
+	var readyToCleanup = new RoboChart!Transition;
+	readyToCleanup.name = "ReadyToCleanup";
+	readyToCleanup.source = readyState;
+	readyToCleanup.target = cleanupState;
+		var deactivateTrigger = new RoboChart!Trigger;
+		deactivateTrigger._type = TriggerType#SIMPLE;
+		deactivateTrigger.event = skillInterface.events.select( ev | ev.name.startsWith("deactivate") ).unique();
+	readyToCleanup.trigger = deactivateTrigger;
+	rcdsm.transitions.add( readyToCleanup );
+
+	var cleanupToDeactivated = new RoboChart!Transition;
+	cleanupToDeactivated.name = "CleanupToDeactivated";
+	cleanupToDeactivated.source = cleanupState;
+	cleanupToDeactivated.target = deactivatedState;
+	rcdsm.transitions.add( cleanupToDeactivated );
+
+	// Receive value transitions - skill outputs
+	for (sdt: RoboArch!Variable in amdsk.outputs){
+		var handleOutputsReceiveEvent = new RoboChart!Transition;
+		handleOutputsReceiveEvent.name = "ReadyReceive" + sdt.name;
+		handleOutputsReceiveEvent.source = readyState;
+		handleOutputsReceiveEvent.target = readyState;
+			var handleOutputsReceiveTrigger = new RoboChart!Trigger;
+			handleOutputsReceiveTrigger._type = TriggerType#INPUT;
+			printDebug("##### events: " + platformEvents.asString() + ", fnd: " + DSkillPlatformEventName(amdsk.name, sdt.name) );
+			handleOutputsReceiveTrigger.event = platformEvents.select( ev | ev.name = DSkillPlatformEventName(amdsk.name, sdt.name) ).unique();
+			handleOutputsReceiveTrigger.parameter = variables.vars.select( v | v.name = SkillVariableName(sdt.name) ).unique();
+		handleOutputsReceiveEvent.trigger = handleOutputsReceiveTrigger;
+			var handleOutputsReceiveSetFlag = new RoboChart!Assignment;
+			handleOutputsReceiveSetFlag.left = CreateRCVarRef( variables.vars.select( v | v.name = DSkillSenseGuardConditionName(sdt.name) ).unique() );
+			handleOutputsReceiveSetFlag.right = CreateRCExpression(true);
+		handleOutputsReceiveEvent.action = handleOutputsReceiveSetFlag;
+		rcdsm.transitions.add( handleOutputsReceiveEvent );
+
+		var handleOutputsReceiveEvent = new RoboChart!Transition;
+		handleOutputsReceiveEvent.name = "HandleOutputsReceive" + sdt.name;
+		handleOutputsReceiveEvent.source = handleoutputsState;
+		handleOutputsReceiveEvent.target = handleoutputsState;
+		handleOutputsReceiveEvent.condition = CreateRCRefExp( variables.vars.select( v | v.name =  DSkillSenseGuardConditionName(sdt.name) ).unique() );
+			var handleOutputsReceiveOutput = new RoboChart!Trigger;
+			handleOutputsReceiveOutput._type = TriggerType#OUTPUT;
+			handleOutputsReceiveOutput.event = skillInterface.events.select( ev | ev.name = SkillEventName(amdsk.name, sdt.name) ).unique();
+
+			var outputsVarRef = CreateRCRefExp( variables.vars.select( v | v.name = SkillVariableName(sdt.name) ).unique() );
+			var skillPriorityRef = CreateRCRefExp(  variables.vars.select( v | v.name = SkillParamVariableName(PriorityParamName()) ).unique() );
+			handleOutputsReceiveOutput.value =  CreateRCTupleExp( Sequence{outputsVarRef, skillPriorityRef}  );
+
+			var handleOutputsReceiveClearFlag = new RoboChart!Assignment;
+			handleOutputsReceiveClearFlag.left = CreateRCVarRef( variables.vars.select( v | v.name = DSkillSenseGuardConditionName(sdt.name) ).unique() );
+			handleOutputsReceiveClearFlag.right = CreateRCExpression(false);
+		handleOutputsReceiveEvent.action = CreateRCSeqStatement( Sequence{CreateRCSendEvent(handleOutputsReceiveOutput), handleOutputsReceiveClearFlag} );
+		rcdsm.transitions.add( handleOutputsReceiveEvent );
+	}
+
+	// Receive value transitions - skill actuation commands
+	for (act: RoboArch!Variable in amdsk.inputs){
+		var readyReceiveEvent = new RoboChart!Transition;
+		readyReceiveEvent.name = "ReadyReceive" + act.name;
+		readyReceiveEvent.source = readyState;
+		readyReceiveEvent.target = readyState;
+			var readyReceiveTrigger = new RoboChart!Trigger;
+			readyReceiveTrigger._type = TriggerType#INPUT;
+			readyReceiveTrigger.event = skillInterface.events.select( ev | ev.name = (amdsk.name + act.name) ).unique();
+			readyReceiveTrigger.parameter = variables.vars.select( v | v.name = act.name).unique();
+		readyReceiveEvent.trigger = readyReceiveTrigger;
+		rcdsm.transitions.add( readyReceiveEvent );
+	}
+
+	// Receive value transitions - skill parameters
+	for (par: RoboArch!Variable in amdsk.parameters){
+
+		var initialiseReceiveEvent = new RoboChart!Transition;
+		initialiseReceiveEvent.name = "InitialiseReceive" + par.name + ParameterPostfix();
+		initialiseReceiveEvent.source = initialiseState;
+		initialiseReceiveEvent.target = initialiseState;
+			var initialiseReceiveTrigger = new RoboChart!Trigger;
+			initialiseReceiveTrigger._type = TriggerType#INPUT;
+			printDebug("##### skillInterface - " + skillInterface.asString() );
+			printDebug("##### skillInterface.events - " + skillInterface.events.asString() );
+			initialiseReceiveTrigger.event = skillInterface.events.select( ev | ev.name = (amdsk.name + par.name + ParameterPostfix()) ).unique();
+			initialiseReceiveTrigger.parameter = variables.vars.select( v | v.name = par.name + ParameterPostfix() ).unique();
+		initialiseReceiveEvent.trigger = initialiseReceiveTrigger;
+			var monitorFlagRef = CreateRCVarRef( initialisationGuardFlags.select(v | v.name.startsWith(par.name)).unique() );
+			var initialiseStatement =  CreateRCAssignment( monitorFlagRef , CreateRCExpression(true));
+		initialiseReceiveEvent.action = initialiseStatement;
+		rcdsm.transitions.add( initialiseReceiveEvent );
+
+		var deactivatedReceiveEvent = new RoboChart!Transition;
+		deactivatedReceiveEvent.name = "DeactivatedReceive" + par.name + ParameterPostfix();
+		deactivatedReceiveEvent.source = deactivatedState;
+		deactivatedReceiveEvent.target = deactivatedState;
+			var deactivatedReceiveTrigger = new RoboChart!Trigger;
+			deactivatedReceiveTrigger._type = TriggerType#INPUT;
+			deactivatedReceiveTrigger.event = skillInterface.events.select( ev | ev.name = (amdsk.name + par.name + ParameterPostfix()) ).unique();
+			deactivatedReceiveTrigger.parameter = variables.vars.select( v | v.name = par.name + ParameterPostfix() ).unique();
+		deactivatedReceiveEvent.trigger = deactivatedReceiveTrigger;
+		rcdsm.transitions.add( deactivatedReceiveEvent );
+
+		var readyReceiveEvent = new RoboChart!Transition;
+		readyReceiveEvent.name = "ReadyReceive" + par.name + ParameterPostfix();
+		readyReceiveEvent.source = readyState;
+		readyReceiveEvent.target = readyState;
+			var readyReceiveTrigger = new RoboChart!Trigger;
+			readyReceiveTrigger._type = TriggerType#INPUT;
+			readyReceiveTrigger.event = skillInterface.events.select( ev | ev.name = (amdsk.name + par.name + ParameterPostfix()) ).unique();
+			readyReceiveTrigger.parameter = variables.vars.select( v | v.name = par.name + ParameterPostfix() ).unique();
+		readyReceiveEvent.trigger = readyReceiveTrigger;
+		rcdsm.transitions.add( readyReceiveEvent );
+	}
+
+}

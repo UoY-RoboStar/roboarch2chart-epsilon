@@ -1,0 +1,53 @@
+package maildelivery::types
+interface Arm {
+ArmPosition ( request : JointTrajectory )
+}
+
+interface Base {
+Move (  request : Velocities )
+const ZERO_LINEAR_VELOCITY : Velocity
+const ZERO_ANGULAR_VELOCITY : Velocity
+}
+
+interface Gripper {
+	Grip (  request : Grip )
+}
+
+interface Audio {
+Announce (  request : Announcement )
+}
+
+datatype Velocities {   linear : Velocity angular : Velocity } 
+type Time 
+datatype Scan { header : Time startAngle : Angle stopAngle : Angle timeBetweenMeasurements : Time Ranges : Seq( Range ) Intensities : Seq( Intensity ) } 
+type Angle 
+type Range 
+type Intensity 
+datatype Grip { position : Distance maxEffort : Force } 
+datatype Announcement { message : string } 
+type Distance 
+type Force 
+datatype GripReport { position : Distance effort : Force stalled : boolean reachedGoal : boolean } 
+datatype PointImage { header : Time width : nat height : nat points : Seq( ColourPoint ) } 
+datatype JointTrajectory { header : Time name : Seq( string ) points : Seq( TrajectoryPoint ) } 
+type ColourPoint 
+type TrajectoryPoint 
+interface PointCloud {
+	event envPoints : Scan
+}
+
+type Coordinate 
+
+interface ColourPointCloud {
+	event envColourPoints : PointImage
+}
+
+enumeration Office { CS001 CS002 CS003 } 
+type Location 
+interface SystemConstants {
+
+const ZERO_VELOCITIES : Velocities
+}
+
+type Velocity
+record Office { number : nat location : Coordinate }

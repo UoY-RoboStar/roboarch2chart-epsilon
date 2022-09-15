@@ -1,0 +1,120 @@
+/********************************************************************************
+ * Copyright (c) 2022 University of York and others
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0.
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ *
+ * Contributors:
+ *   William Barnett - initial definition
+ ********************************************************************************/
+
+/*************************
+ * Functions
+ **************************/
+
+
+ 
+ operation ref(id:String, type: Any): Any{
+ 	printDebug("ref ( " + id + ", " + type.asString() + " )" );
+ 	var modelInstances =  type.allInstances();
+ 	
+ 	printDebug(" - all instances:  " + modelInstances.asString() );
+ 	
+ 	
+ 	var foundInstances = modelInstances.select( i | i.name = id );
+ 	printDebug(" - found instances:  " + foundInstances.asString() );
+ 	
+ 	var foundReference  = foundInstances.unique();
+ 	printDebug(" - found:  " + foundReference.asString() );
+ 	
+ 	// Return a reference to types that can have one.
+ 	if( foundReference.isKindOf(RoboChart!TypeDecl) ) {
+ 		printDebug("returned typ ref");
+ 		return RCTypeDefToRef(foundReference);
+ 		
+ 	} else if (foundReference.isKindOf(RoboChart!Variable))  {	
+ 		printDebug("returned var ref");
+ 		return CreateRCVarRef(foundReference);
+ 	
+ 	} else {
+ 		printDebug("returned found");
+ 		return foundReference;
+ 		
+ 	}
+ }
+
+
+//operation GetConnectionsForCommonInterface( lctla: RoboChart!ControllerRef, lctlb: RoboChart!ControllerRef,
+//											intnm: String, intin: Set(RoboChart!Event), intout: Set(RoboChart!Event) ): Set(RoboChart!Connection) {
+//	printDebug("STUB GetConnectionsForCommonInterface");
+//	//TODO
+//	
+//	return Set{};
+//}
+
+//$pre not( lcna.isKindOf(RoboChart!Context) ) and not( lcnb.isKindOf(RoboChart!Context) )
+operation GetConnectionsForCommonInterface (lcna: RoboChart!ConnectionNode, lcnb: RoboChart!ConnectionNode, 
+											intnm: String, intin: Set(RoboChart!Event), intout: Set(RoboChart!Event) ): Set(RoboChart!Connection)  {
+	printDebug("GetConnectionsForCommonInterface");
+	
+	var rccon: Set(RoboChart!Connection);
+		
+	var commonInterface: RoboChart!Interface;
+	
+	if ( lcna.isTypeOf(RoboChart!ControllerRef) or lcna.isTypeOf(RoboChart!OperationRef) or
+	     lcna.isTypeOf(RoboChart!RoboticPlatformRef) or lcna.isTypeOf(RoboChart!StateMachineRef) ){
+	     
+		commonInterface = lcna.ref.interfaces.select( i | i.name = intnm ).unique();
+	
+	} else {
+		commonInterface = lcna.interfaces.select( i | i.name = intnm ).unique();
+	}
+	
+		printDebug("#####c lcna " + lcna.asString() );
+		printDebug("#####c lcnb " + lcnb.asString() );
+		printDebug("#####c iin " + intin.asString() );
+		printDebug("#####c iout " + intout.asString() );
+		printDebug("#####c evs " + commonInterface.events.asString() );
+
+	//inputs
+	for (ev: RoboChart!Event in commonInterface.events.select( ev | intin.exists(inev | inev.name = ev.name) ) ) {
+		var connection : new RoboChart!Connection;
+		printDebug("#####c in" + ev.asString() );
+		connection.from = lcnb;
+		connection.efrom = ev;
+		connection.to = lcna;
+		connection.eto= ev; 
+		
+		rccon.add(connection);
+	}
+	
+	//outputs
+	for (ev: RoboChart!Event in commonInterface.events.select( ev | intout.exists(outev | outev.name = ev.name) ) ) {
+		var connection : new RoboChart!Connection;
+		printDebug("#####c out" + ev.asString() );
+		connection.from = lcna;
+		connection.efrom = ev;
+		connection.to = lcnb;
+		connection.eto= ev; 
+		
+		rccon.add(connection);
+	}
+	
+	printDebug("##### " + rccon.asString() );
+	
+	return rccon;
+}
+
+/*************************
+ * Util
+ **************************/
+
+operation EObject clone(): Any{
+	var emfTool = new Native("org.eclipse.epsilon.emc.emf.tools.EmfTool");
+	var ecoreUtil = emfTool.ecoreUtil;
+	return ecoreUtil.copy(self);
+
+}

@@ -1,0 +1,175 @@
+
+
+<project>
+
+	
+	<include file="Test-Paths.xml"/>
+	<include file="${erules.base.location}/scripts/Run-ModelManagement.xml"/>
+	<include file="Test-ModelManagement.xml"/>
+	
+	<!-- TEST TEXT --> 
+	<property name="ra.text.reactiveskillsminimal" value="${ra.text.location}/ReactiveSkillsMinimal.rac" />
+	<property name="ra.text.reactiveskillsobstacleavoidance" value="${ra.text.location}/ReactiveSkillsObstacleAvoidance.rac" />
+	<property name="ra.text.reactiveskillsobstacleavoidancemonitor" value="${ra.text.location}/ReactiveSkillsObstacleAvoidanceMonitor.rac" />
+
+	<!-- GENERATED ROBOCHART MODELS 
+	<property name="rc.model.reactiveskillsminimal" location="${models.location}/RC_EmptyControlLayer.model" />
+	<property name="rc.model.reactiveskillsobstacleavoidance" location="${models.location}/RC_ReactiveSkillsObstacleAvoidance.model" />
+	<property name="rc.model.reactiveskillsobstacleavoidancemonitor" location="${models.location}/RC_ReactiveSkillsObstacleAvoidanceMonitor.model" />
+	-->
+	
+	<!-- EXPECTED ROBOCHART TEXT -->
+	<property name="rc.exp.text.reactiveskillsminimal" value="${uri.eclipse.prefix}/ReactiveSkillsMinimal/ReactiveSkillsMinimal.rct" />
+	<property name="rc.exp.text.reactiveskillsobstacleavoidance" value="${uri.eclipse.prefix}/ReactiveSkillsObstacleAvoidance/ReactiveSkillsObstacleAvoidance.rct" />
+	<property name="rc.exp.text.reactiveskillsobstacleavoidancemonitor" value="${uri.eclipse.prefix}/ReactiveSkillsObstacleAvoidanceMonitor/ReactiveSkillsObstacleAvoidanceMonitor.rct" />
+
+	
+	<!-- UNIT TESTS -->
+	<property name="reactiveskills.system.eunit.location" location="${tests.location}/reactive-skills-system.eunit"/>
+	<property name="reactiveskills.unit.eunit.location" location="${tests.location}/reactive-skills-unit.eunit"/>
+
+	<echo>  tests.location:  ${tests.location}		</echo>
+	<echo>  reactiveskills.unit.eunit.location:  ${reactiveskills.unit.eunit.location}		</echo>
+	<echo>  ra.text.reactiveskillsminimal:  ${ra.text.reactiveskillsminimal}		</echo>
+	<echo>  rc.exp.text.reactiveskillsminimal:  ${rc.exp.text.reactiveskillsminimal}		</echo>
+	
+	
+	<!-- MODEL LOADING TARGETS - REACTIVE_SKILLS -->
+	<target name="load-reactiveskills-minimal-models" description="Load the EmptyControlLayer model.">
+		
+		<!--  <epsilon.emf.loadModel name="PartGen"
+            modelfile="partgen.model"
+        	metamodeluri="http://www.robocalc.circus/RoboChart"
+            read="false" store="true"/>
+            	
+                <epsilon.emf.loadModel name="PartExpected"
+                    modelfile="partexpected.model"
+                	metamodeluri="http://www.robocalc.circus/RoboChart"
+                    read="false" store="true"/> -->
+		
+		<!--  Reactive Skills Minimal -->
+		<roboarch2chart.load name="RA_ReactiveSkillsMinimal"
+			modeluri="${ra.text.reactiveskillsminimal}"
+			metamodeluri="${ra.metamodel.uri}"
+			read="true" store="false" expand="true" failonerrors="true" cached="false" />
+		
+		<robochart2sim.load name="RC_ReactiveSkillsMinimal"
+			modeluri="${rc.exp.text.reactiveskillsminimal}"
+			metamodeluri="http://www.robocalc.circus/RoboChart"
+			read="true" store="false" expand="true" failonerrors="true" cached="false" />
+		
+		<epsilon.emf.loadModel name="GenRC_ReactiveSkillsMinimal"
+			modelfile="${transformed.model.location}/ReactiveSkillsMinimal_${start-timestamp}.model" 
+			metamodeluri="${rc.metamodel.uri}"
+			read="false" 
+			store="true"
+			expand="false"
+			cached="false"/>
+		
+		
+		<!-- Reactive Skills Obstacle Avoidance -->
+		
+		<roboarch2chart.load name="RA_ReactiveSkillsObstacleAvoidance"
+			modeluri="${ra.text.reactiveskillsobstacleavoidance}"
+			metamodeluri="${ra.metamodel.uri}"
+			read="true" store="false" expand="true" failonerrors="true" cached="false" />
+		
+		<robochart2sim.load name="RC_ReactiveSkillsObstacleAvoidance"
+			modeluri="${rc.exp.text.reactiveskillsobstacleavoidance}"
+			metamodeluri="http://www.robocalc.circus/RoboChart"
+			read="true" store="false" expand="true" failonerrors="true" cached="false" />
+
+		<epsilon.emf.loadModel name="GenRC_ReactiveSkillsObstacleAvoidance"
+			modelfile="${transformed.model.location}/ReactiveSkillsObstacleAvoidance_${start-timestamp}.model" 
+			metamodeluri="${rc.metamodel.uri}"
+			read="false" store="true" expand="true"	cached="false"/>
+		
+		<!-- Reactive Skills Obstacle Avoidance Monitor -->
+		
+		<roboarch2chart.load name="RA_ReactiveSkillsObstacleAvoidanceMonitor"
+			modeluri="${ra.text.reactiveskillsobstacleavoidancemonitor}"
+			metamodeluri="${ra.metamodel.uri}"
+			read="true" store="false" expand="true" failonerrors="true" cached="false" />
+
+		<epsilon.emf.loadModel name="GenRC_ReactiveSkillsObstacleAvoidanceMonitor"
+			modelfile="${transformed.model.location}/ReactiveSkillsObstacleAvoidanceMonitor_${start-timestamp}.model" 
+			metamodeluri="${rc.metamodel.uri}"
+			read="false" 
+			store="true"
+			expand="true"
+			cached="false"/>
+	</target>
+
+	<!-- TODO check loading multe file RoboChart models. -->
+	<target name="debug-models">
+		<epsilon.emf.loadModel name="Reloaded_ReactiveSkillsObstacleAvoidance"
+			modelfile="${transformed.model.location}/ReactiveSkillsObstacleAvoidance.model" 
+			metamodeluri="${rc.metamodel.uri}"
+			read="true" store="false" expand="true"	cached="false"/>
+
+		<epsilon.emf.loadModel name="Reloaded_ReactiveSkillsMinimal"
+			modelfile="${transformed.model.location}/ReactiveSkillsMinimal.model" 
+			metamodeluri="${rc.metamodel.uri}"
+			read="true" 
+			store="false"
+			expand="true"
+			cached="false"/>
+	</target>
+	
+	<target name="debug-models-rs">
+		<epsilon.disposeModels/>
+		<robochart2sim.load name="Platform1"
+			modeluri="${rc.text.location}/ReactiveSkillsMinimal/ReactiveSkillsMinimal.rct"
+			metamodeluri="http://www.robocalc.circus/RoboChart"
+			read="true" store="false" expand="true" failonerrors="true" cached="false" />
+
+			<robochart2sim.load name="Platform2"
+				modeluri="${rc.text.location}/ReactiveSkillsObstacleAvoidance/ReactiveSkillsObstacleAvoidance.rct"
+				metamodeluri="http://www.robocalc.circus/RoboChart"
+				read="true" store="false" expand="true" failonerrors="true" cached="false" />
+	</target>
+	
+	
+	<!-- EUNIT TARGETS -->
+	
+	<target name="run-reactiveskills-tests" description="Loads models using a separate Ant target">
+		
+		<antcall target="testmodelmanagement.clean" />
+		
+		<!-- Setup global epsilon variables -->
+        <epsilon.eol>
+            <![CDATA[
+        		// Global epsilon variables
+	        	var ruleName : String;
+	        	var elementName : String;
+	        	var elementType : Any;
+        		var ruleOutput: Any;
+            ]]>
+			<exports ref="ruleName" as="TestRuleName"/>
+			<exports ref="elementName" as="TestElementName"/>
+			<exports ref="elementType" as="TestElementType"/>
+        	<exports ref="ruleOutput" as="TestRuleOutput"/>
+        </epsilon.eol>
+		
+		<!-- Run eunit unit tests -->
+		<epsilon.eunit src="${reactiveskills.unit.eunit.location}" failOnErrors="true">
+		    <uses ref="TestRuleName" as="currentRuleName"/>
+		    <uses ref="TestElementName" as="currentElementName"/>
+		    <uses ref="TestElementType" as="currentElementType"/>
+		    <uses ref="TestRuleOutput" as="currentRuleOutput"/>
+		</epsilon.eunit>
+		
+		<antcall target="testmodelmanagement.clean" /> 
+		
+		<!-- Run eunit system tests -->
+		<epsilon.eunit src="${reactiveskills.system.eunit.location}" failOnErrors="true" /> 
+
+	</target>
+	
+	<target name="dispose-models" description="Dispose all models.">
+		<echo>  disposing models...</echo>
+		<epsilon.disposeModel model="RoboChart"/>
+		<epsilon.disposeModels/>
+	</target>
+
+</project>

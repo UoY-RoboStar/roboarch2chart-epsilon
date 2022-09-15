@@ -1,0 +1,81 @@
+package Control
+
+import Types::* 
+import Control::SkillsManager::* 
+import Control::DSkill::Move::* 
+import Control::CSkill::RandomMove::* 
+
+
+
+
+controller Control {
+	
+	
+	uses IControl
+	uses IMovePlatformSensing
+	uses IMovePlatformActuation
+
+	sref Move = Move
+
+	sref RandomMove = RandomMove
+
+	sref SkillsManager = SkillsManager
+
+	connection SkillsManager on deactivateMove to Move on deactivateMove
+
+	connection Control on getActiveSkills to SkillsManager on getActiveSkills
+
+	connection SkillsManager on activateMove to Move on activateMove
+
+	connection SkillsManager on RandomMovevOutValue to Control on RandomMovevOutValue
+
+	connection Control on initiateEventMonitor to SkillsManager on initiateEventMonitor
+
+	connection SkillsManager on activeSkills to Control on activeSkills
+
+	connection SkillsManager on executeMove to Move on executeMove
+
+	connection SkillsManager on eventReply to Control on eventReply
+
+	connection SkillsManager on MovePriorityParam to Move on MovePriorityParam
+
+	connection Control on setMovePriorityParameter to SkillsManager on setMovePriorityParameter
+
+	connection Control on deactivate to SkillsManager on deactivate
+
+	connection Control on getMovePriorityParameter to SkillsManager on getMovePriorityParameter
+
+	connection Move on completeMove to SkillsManager on completeMove
+
+	connection SkillsManager on activateRandomMove to RandomMove on activateRandomMove
+
+	connection SkillsManager on deactivateRandomMove to RandomMove on deactivateRandomMove
+
+	connection SkillsManager on MovevIn to Move on MovevIn
+
+	connection RandomMove on RandomMovevOut to SkillsManager on RandomMovevOut
+
+	connection SkillsManager on RandomMovePriorityParam to RandomMove on RandomMovePriorityParam
+
+	connection SkillsManager on movePriorityParameter to Control on movePriorityParameter
+
+	connection Control on stopEventMonitor to SkillsManager on stopEventMonitor
+
+	connection RandomMove on completeRandomMove to SkillsManager on completeRandomMove
+
+	connection SkillsManager on randomMovePriorityParameter to Control on randomMovePriorityParameter
+
+	connection Control on setRandomMovePriorityParameter to SkillsManager on setRandomMovePriorityParameter
+
+
+	connection Control on activate to SkillsManager on activate
+
+	connection SkillsManager on executeRandomMove to RandomMove on executeRandomMove
+
+	connection Control on getRandomMoveVOutValue to SkillsManager on getRandomMoveVOutValue
+
+	connection Control on getRandomMovePriorityParameter to SkillsManager on getRandomMovePriorityParameter
+
+	connection Move on MovevInPlatform to Control on MovevInPlatform
+}
+

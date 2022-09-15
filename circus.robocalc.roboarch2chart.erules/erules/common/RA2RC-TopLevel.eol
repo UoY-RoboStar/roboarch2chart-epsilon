@@ -1,0 +1,281 @@
+/********************************************************************************
+ * Copyright (c) 2022 University of York and others
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0.
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ *
+ * Contributors:
+ *   William Barnett - initial definition
+ ********************************************************************************/
+
+operation LayerToTypes(amlyr:RoboArch!Layer) : Set(RoboChart!TypeDecl) {
+	printDebug("LayerToTypes - " + amlyr.name );
+	var rctyp = Set{};
+	
+	if (amlyr.pattern <> null){ 
+		rctyp.addAll( amlyr.equivalent("ReactiveSkillsLayerToTypes") ); //Add supported patterns to this list.
+	}
+	
+	return rctyp;
+}
+
+
+operation LayerToFunctions(amlyr:RoboArch!Layer) : Set(RoboChart!Function) {
+	printDebug("LayerToFunctions - " + amlyr.name );
+	var rctyp = Set{};
+	
+	if (amlyr.pattern <> null){ 
+		rctyp.addAll( amlyr.equivalent("ReactiveSkillsLayerToFunctions") ); //Add supported patterns to this list.
+	}
+	
+	return rctyp;
+}
+
+
+operation LayerToInterface(amlyr:RoboArch!Layer) : Set(RoboChart!TypeDecl) {
+	printDebug("LayerToInterface - " + amlyr.name);
+	var rclyri = Set{};
+	
+	if (amlyr.pattern <> null){ 
+		rclyri.addAll( amlyr.equivalent("ReactiveSkillsLayerToInterface") ); //Add supported patterns to this list.
+	}
+	
+	return rclyri;
+}
+
+
+operation LayersToControllers(amlyrs:Set(RoboArch!Layer)): Set(RoboChart!ControllerRef) {
+	
+	//#amlyrs != 2
+	if (amlyrs.size <> 2){ 
+		printDebug("LayersToControllers - size <> 2");
+		var cLayer = amlyrs.select( lyr | lyr.isTypeOf(RoboArch!ControlLayer) );
+		var eLayer = amlyrs.select( lyr | lyr.isTypeOf(RoboArch!ExecutiveLayer) );
+		var pLayer = amlyrs.select( lyr | lyr.isTypeOf(RoboArch!PlanningLayer) );
+		
+		printDebug("hh clyr " + cLayer.random().type().asString() );
+		printDebug("hh elyr " + eLayer.asString() );
+		printDebug("hh plyr " + pLayer.asString() );
+	
+		//Module nodes = the union of controllers and the roboticplatform
+			
+		var rcctl: Set(RoboChart!ControllerRef);
+				rcctl.addAll( ControlLayerToController(cLayer) );  
+				rcctl.addAll( ExecutiveLayerToController(eLayer, cLayer) ); 
+				rcctl.addAll( PlanningLayerToController(pLayer, eLayer) ); 
+
+		rcctl.remove(Set{});
+		return rcctl;
+	
+	//#amlyrs = 2
+	} else if (amlyrs.size = 2){
+		printDebug("STUB LayersToControllers - size == 2");
+		//TODO
+		return Set{};
+	
+	//otherwise	
+	} else {
+		return Set{};
+	}
+}
+
+
+operation LayersToConnections(amlyrs:Set(RoboArch!Layer)): Set(RoboChart!Connection) {
+	var cLayer = amlyrs.selectOne( lyr | lyr.isTypeOf(ControlLayer) );
+	var eLayer = amlyrs.selectOne( lyr | lyr.isTypeOf(ExecutiveLayer) );
+	var pLayer = amlyrs.selectOne( lyr | lyr.isTypeOf(PlanningLayer) );
+
+	var rccon: Set(RoboChart!Connection) = Set{};
+	
+	//#amlyrs = 3
+	if( (amlyrs.size = 3) and (cLayer.pattern <> null) and (eLayer.pattern <> null) and (pLayer.pattern <> null) ){
+		printDebug("STUB LayersToConnections - #amlyrs == 3");
+
+		rccon.addAll( GetConnectionsForCommonInterface( ControlLayerToController( cLayer.asSet() ).unique() ,
+														ExecutiveLayerToController( cLayer.asSet() , eLayer.asSet() ).unique() ,
+														InterfacePrefix() + cLayer.name,
+														LayerInterfaceInputs(cLayer),
+														LayerInterfaceOutputs(cLayer)
+													   ) );
+		
+		rccon.addAll( GetConnectionsForCommonInterface( ExecutiveLayerToController( eLayer.asSet(), cLayer.asSet() ).unique() ,
+														PlanningLayerToController( pLayer.asSet(), eLayer.asSet() ).unique() ,
+														InterfacePrefix() + eLayer.name,
+														LayerInterfaceInputs(eLayer),
+														LayerInterfaceOutputs(eLayer)
+													   ) );
+		
+		return Set{};
+	
+	//#amlyrs = 2	
+	} else if (amlyrs.size = 2) {
+		printDebug("STUB LayersToConnections - #amlyrs == 2");
+		//TODO
+		
+		return Set{};
+	
+	//#amlyrs = 1
+	} else if (amlyrs.size = 1){
+		printDebug("LayersToConnections - #amlyrs == 1");
+		return Set{};
+	
+	//otherwise
+	} else {
+		return Set{};
+	}
+}
+
+
+operation ControlLayerToController(amcl: Set(RoboArch!ControlLayer)): Set(RoboChart!ControllerRef){
+	printDebug("ControlLayerToController");
+	
+	printDebug( "gg amcl " + amcl.unique().asString() ); 
+	printDebug( "gg amcl eq " + amcl.unique().equivalent().asString() );
+	printDebug( "gg amcl.pattern " + amcl.unique().pattern.asString() );
+	
+	increaseDebug();
+		var rclyr = amcl.unique().equivalent("EmptyControlLayerToController", "ReactiveSkillsLayerToController", "SubsumptionLayerToController").asSet(); //All supported patterns should be added here
+	decreaseDebug();
+	
+	printDebug( "gg amcl " + amcl.asString() );
+	printDebug( "gg rclyr " + rclyr.asString() );
+		
+	/* Note there is slight difference in paradigm here compared to the rules, 
+       equivalent gets the model elements of the relevant etl rule. */
+		
+	return rclyr;
+}
+
+operation ExecutiveLayerToController( amelyr: Set(RoboArch!ExecutiveLayer), amclyr: Set(RoboArch!ControlLayer) ): Set(RoboChart!ControllerRef){
+	printDebug("ExecutiveLayerToController");
+
+	increaseDebug();
+		var rclyr = amelyr.equivalent("EmptyExecutiveLayerToController","HtnExecutiveLayerToController").asSet(); //All supported patterns should be added here
+	decreaseDebug();
+	
+	/* Note there is slight difference in paradigm here compared to the rules, 
+       equivalent gets the model elements of the relevant etl rule. Additionally, 
+       because etl rules can only have a single source element the parameters are 
+       not directly passed here. The extra parameters are included for a close
+       correspondance between the z rules. */
+	
+	return rclyr;
+}
+
+operation PlanningLayerToController( amplyr: Set(RoboArch!ExecutiveLayer), amllyr: Set(RoboArch!ControlLayer) ): Set(RoboChart!ControllerRef){
+	printDebug("PlanningLayerToController");
+
+	increaseDebug();
+		var rclyr = amplyr.equivalent("EmptyPlanningLayerToController", "HtnPlanningLayerToController", "PlannerSchedulerLayerToController").asSet(); //All supported patterns should be added here
+	decreaseDebug();	
+	
+	/* Note there is slight difference in paradigm here compared to the rules, 
+       equivalent gets the model elements of the relevant etl rule. Additionally, 
+       because etl rules can only have a single source element the parameters are 
+       not directly passed here. The extra parameters are included for a close
+       correspondance between the z rules. */
+	
+	return rclyr;
+}
+
+
+
+operation ControlLayerToRoboticPlatform(amcl:Set(RoboArch!ControlLayer)): Set(RoboChart!RoboticPlatformRef){
+	printDebug("ControlLayerToRoboticPlatform");
+
+	var rcpr: Set(RoboChart!RoboticPlatformRef);
+	
+	rcpr = amcl.equivalent("ReactiveSkillsLayerToRoboticPlatform", "SubsumptionLayerToRoboticPlatform").asSet();
+	
+	return rcpr;
+}
+
+operation RoboticPlatformConnections(amclyr:Set(RoboArch!ControlLayer), rcrp:Set(RoboticPlatformRef)): Set(RoboChart!Connection) {
+	printDebug("RoboticPlatformConnections");
+	
+	var rccon: Set(RoboChart!Connections);
+	
+	rccon = amclyr.equivalent("ReactiveSkillsPlatformConnections", "SubsumptionPlatformConnections").asSet();
+	
+		/* Note there is slight difference in paradigm here compared to the rules, 
+       equivalent gets the model elements of the relevant etl rule. Additionally, 
+       because etl rules can only have a single source element the parameters are 
+       not directly passed here. The extra parameters are included for a close
+       correspondance between the z rules. */
+		
+	return rccon;
+}
+
+
+operation LayerInterfaceInputs(amlyr: RoboArch!Layer) : Set(RoboChart!Event){
+	printDebug("LayerInterfaceInputs");
+	
+	var rcevs: Set(Event);
+		
+		if ( amlyr.pattern.isTypeOf( RoboArch!ReactiveSkills ) ){
+			rcevs = ReactiveSkillsLayerInterfaceInputs(amlyr);
+		} else {
+			//TODO add other patterns
+		}
+		
+	return rcevs;
+}
+
+
+operation LayerInterfaceOutputs(amlyr: RoboArch!Layer) : Set(RoboChart!Event){
+	printDebug("LayerInterfaceOutputs");
+	
+	var rcevs: Set(Event);
+		
+		if ( amlyr.pattern.isTypeOf( RoboArch!ReactiveSkills ) ){
+			rcevs = ReactiveSkillsLayerInterfaceOutputs(amlyr);
+		} else {
+			//TODO add other patterns
+		}
+	return rcevs;
+}
+
+
+
+operation LayerInterfaceName(layer: String): String {
+	return InterfacePrefix() + layer;
+}
+
+
+
+/*************************
+ * Create
+ **************************/
+
+operation CreatePackageWithController(name:String): RoboChart!RCPackage{
+	var controller : new RoboChart!ControllerDef;
+	controller.name = name;
+	
+	var package : new RoboChart!RCPackage;
+	package.name = name;
+	package.controllers.add(controller);
+	
+	return package;
+}
+
+
+
+/*************************
+ * Debug
+ **************************/
+ 
+ operation printDebugControllerSummary( generatedControllers: Set(RoboChart!Nodes) ){
+	//Print a summary of generated controllers
+	
+	var numControllers:Integer = 0;
+	
+	for ( controllerRef : RoboChart!ControllerRef in generatedControllers){
+		numControllers++;
+		printDebug("Controller " + controllerRef.name );
+	}
+	
+	printDebug(numControllers.asString() + " controller(s) created.");
+ }

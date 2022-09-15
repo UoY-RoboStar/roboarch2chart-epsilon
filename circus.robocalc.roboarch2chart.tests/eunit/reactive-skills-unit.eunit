@@ -1,0 +1,574 @@
+/********************************************************************************
+ * Copyright (c) 2022 University of York and others
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0.
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ *
+ * Contributors:
+ *   William Barnett - initial definition
+ ********************************************************************************/
+
+import "../../circus.robocalc.roboarch2chart.erules/erules/patterns/reactive_skills/SkillsManagerToStateMachine.eol";
+
+   // Controls whether debug information is printed.
+	var debug = true;
+	var debugPrintRuleNames = true;
+	var level = 0;
+	var previouslevel = 0;
+	
+	//EcoreUtil
+	var emfTool = new Native("org.eclipse.epsilon.emc.emf.tools.EmfTool");
+	var ecoreUtil = emfTool.ecoreUtil;
+
+@model
+operation loadReactiveSkillsModels() {
+  "Loading reactive skills models.".println();
+  
+  runTarget("runmodelmanagement.load-robochart-lib");
+  runTarget("load-reactiveskills-minimal-models");
+}
+
+@After
+operation cleanup(){
+		
+		currentRuleName = null;
+		currentElementName = null;
+		currentElementType = null;
+		currentRuleOutput = null;
+		
+		"Global epsilon variables cleared.".println();
+				
+		
+		runTarget("dispose-models");
+		"Models Disposed.".println();
+		
+		runTarget("testmodelmanagement.clean-models");
+		"Models files deleted.".println();
+}
+
+/*
+
+$onlyWith Map{ "RoboArch" = "RA_ReactiveSkillsObstacleAvoidance", "RoboChart"="GenRC_ReactiveSkillsObstacleAvoidance", "RoboChartLib_Core" = "RoboChartLib_Core", "RoboChartLib_Set" = "RoboChartLib_Set", "RoboChartLib_Sequence" = "RoboChartLib_Sequence", "RoboChartLib_Relation" = "RoboChartLib_Relation", "RoboChartLib_Function" = "RoboChartLib_Function" }
+@test
+operation ReactiveSkillsLayerToTypes_SkillsEventsInterfaces() {
+	"TEST - ReactiveSkillsLayerToTypes_SkillsEventsInterfaces".println();
+	 
+	
+  	currentRuleName = "ReactiveSkillsLayerToTypes";
+  	currentElementName =  "CONTROL";
+  	currentElementType = RoboArch!ControlLayer;
+  	
+ 	runTarget("testmodelmanagement.test-rule-ra2rc");
+ 	
+ 	//Check
+	// 	- Two enumerations are created
+	//	- Named Skills and Events 
+    
+     
+    var foundEnumerations = currentRuleOutput.flatten().select( e | e.isTypeOf(RoboChart!Enumeration) );
+ 	assertTrue( foundEnumerations.size().asString() + ", " + currentRuleOutput.asString() , foundEnumerations.size() = 2 );
+ 	
+ 	var skillEnumeration = foundEnumerations.select( e | e.name = "Skills");
+ 	assertTrue( foundEnumerations.size().asString(), skillEnumeration.size() = 1);
+ 	
+ 	var eventEnumeration =foundEnumerations.select( e | e.name = "Events");	
+ 	assertTrue(foundEnumerations.size().asString() , eventEnumeration.size() = 1 );
+}
+
+
+
+
+$onlyWith Map{"RoboArch" = "RA_ReactiveSkillsMinimal", "RoboChart"="GenRC_ReactiveSkillsMinimal", "Expected_RoboChart"="RC_ReactiveSkillsMinimal", "RoboChartLib_Core" = "RoboChartLib_Core", "RoboChartLib_Set" = "RoboChartLib_Set", "RoboChartLib_Sequence" = "RoboChartLib_Sequence", "RoboChartLib_Relation" = "RoboChartLib_Relation", "RoboChartLib_Function" = "RoboChartLib_Function" }
+@test
+operation SkillsManagerHandlerTransitions_fun() {
+ "TEST - SkillsManagerHandlerTransitions_fun".println();
+  
+ 
+  // Get the expected result from the RoboChart model
+  var receiveTransitionNamesRegEx = "^Handle(ValueQueries|ActiveSkills|Activation|Deactivation|GetParameter|SetParameter)Receive[\\w]*" ;
+
+  var expectedTransitions = Expected_RoboChart!Transition.allInstances().select( t | t.name.matches(receiveTransitionNamesRegEx) ); 
+  
+  // Run the transformations
+  runTarget("runmodelmanagement.ra2rc");
+  runTarget("runmodelmanagement.rc2txt");
+  
+  // Call the method under test
+  var skills : Set(RoboArch!Skills) = RoboArch!Skill.allInstances().asSet();
+  var transitions = SkillsManagerHandlerTransitions( skills );
+  
+  // Check for expected features
+  assertEquals("No of transitions, exp: " + expectedTransitions.asString() + " act: " + transitions.asString(), expectedTransitions.size(), transitions.size() );
+  
+  // --Check each generated transition against those from the expected model.
+  for (expTransition: RoboChart!Transition in expectedTransitions){
+  	
+  	var genTransition = transitions.select(t | t.name = expTransition.name).unique();
+  	
+  	// --Each transition name matches
+  	 assertEquals("Transition event of: " + expTransition.name, expTransition.name , genTransition.name );
+  }
+  
+}
+
+
+
+$onlyWith Map{ "RoboArch" = "RA_ReactiveSkillsObstacleAvoidance", "RoboChart"="GenRC_ReactiveSkillsObstacleAvoidance", "Expected_RoboChart"="RC_ReactiveSkillsObstacleAvoidance", "RoboChartLib_Core" = "RoboChartLib_Core", "RoboChartLib_Set" = "RoboChartLib_Set", "RoboChartLib_Sequence" = "RoboChartLib_Sequence", "RoboChartLib_Relation" = "RoboChartLib_Relation", "RoboChartLib_Function" = "RoboChartLib_Function" }
+@test
+operation SkillsManagerValueQueryTransitions_fun() {
+ "TEST - SkillsManagerValueQueryTransitions_fun".println();
+  
+
+  // Get the expected result from the RoboChart model
+  var expectedTransitions = Expected_RoboChart!Transition.allInstances().select( t | t.name.startsWith("HandleValueQueriesReceive") );
+  
+  // Run the transformations
+  runTarget("runmodelmanagement.ra2rc");
+  runTarget("runmodelmanagement.rc2txt");
+  
+  // Call the method under test
+  var skills : Set(RoboArch!Skills) = RoboArch!Skill.allInstances().asSet();
+  var transitions = SkillsManagerValueQueryTransitions( skills );
+  
+  // Check for expected features
+  assertEquals("No of transitions", expectedTransitions.size(), transitions.size() );
+  
+  // --Check each generated transition against those from the expected model.
+  for (expTransition: RoboChart!Transition in expectedTransitions){
+  	
+  	var genTransition = transitions.select(t | t.name = expTransition.name).unique();
+  	
+  	// --Each value to be handled has corresponding trigger event
+  	 assertEquals("Transition event of: " + expTransition.name, expTransition.trigger.event.name , genTransition.trigger.event.name );
+  }
+  
+}
+
+
+$onlyWith Map{ "RoboArch" = "RA_ReactiveSkillsMinimal", "RoboChart"="GenRC_ReactiveSkillsMinimal", "Expected_RoboChart"="RC_ReactiveSkillsMinimal", "RoboChartLib_Core" = "RoboChartLib_Core", "RoboChartLib_Set" = "RoboChartLib_Set", "RoboChartLib_Sequence" = "RoboChartLib_Sequence", "RoboChartLib_Relation" = "RoboChartLib_Relation", "RoboChartLib_Function" = "RoboChartLib_Function" }
+@test
+operation ValueQueryTransition_fun() {
+	"TEST - ValueQueryTransition_fun".println();
+	 
+
+  // Get the expected result from the RoboChart model
+  var expectedTransition = Expected_RoboChart!Transition.allInstances().select(t | t.name = "HandleValueQueriesReceivegetRandomMoveVOutValue").unique();
+ 
+  // Run the transformations
+  runTarget("runmodelmanagement.ra2rc");
+  runTarget("runmodelmanagement.rc2txt");
+  
+  // Call the method under test
+  var transition = ValueQueryTransition("RandomMove", "vOut");
+  
+  // Check for expected features
+  assertEquals("Name", expectedTransition.name, transition.name);
+  
+  assertEquals("Source name", expectedTransition.source.name, transition.source.name );
+  
+  assertEquals("Source Target", transition.source, transition.target );
+  
+  assertEquals("Trigger", expectedTransition.trigger._type, transition.trigger._type);
+  
+  assertEquals("Action trigger", expectedTransition.action.trigger._type, transition.action.trigger._type);
+  
+} 
+
+
+$onlyWith Map{ "RoboArch" = "RA_ReactiveSkillsMinimal", "RoboChart"="GenRC_ReactiveSkillsMinimal", "Expected_RoboChart"="RC_ReactiveSkillsMinimal", "RoboChartLib_Core" = "RoboChartLib_Core", "RoboChartLib_Set" = "RoboChartLib_Set", "RoboChartLib_Sequence" = "RoboChartLib_Sequence", "RoboChartLib_Relation" = "RoboChartLib_Relation", "RoboChartLib_Function" = "RoboChartLib_Function" }
+@test
+operation SkillsManagerActiveSkillsTransition_fun() {
+	"TEST - SkillsManagerActiveSkillsTransition_fun".println();
+	 
+	
+  // Get the expected result from the RoboChart model
+  var expectedTransition = Expected_RoboChart!Transition.allInstances().select(t | t.name = "HandleActiveSkillsReceive").unique();
+	
+  // Run the transformations
+  runTarget("runmodelmanagement.ra2rc");
+  runTarget("runmodelmanagement.rc2txt");
+  
+  // Call the method under test
+  var transition = SkillsManagerActiveSkillsTransition();
+
+  // Check for expected features
+  assertEquals("Name", expectedTransition.name, transition.name);
+  
+  assertEquals("Source name", expectedTransition.source.name, transition.source.name );
+  
+  assertEquals("Source Target", transition.source, transition.target );
+  
+  assertEquals("Trigger -type", expectedTransition.trigger._type, transition.trigger._type);
+  
+   assertEquals("Trigger - event name", expectedTransition.trigger.event.name, transition.trigger.event.name);
+  
+  assertEquals("Action trigger", expectedTransition.action.trigger._type, transition.action.trigger._type);
+  
+} 
+
+$onlyWith Map{ "RoboArch" = "RA_ReactiveSkillsMinimal", "RoboChart"="GenRC_ReactiveSkillsMinimal", "Expected_RoboChart"="RC_ReactiveSkillsMinimal", "RoboChartLib_Core" = "RoboChartLib_Core", "RoboChartLib_Set" = "RoboChartLib_Set", "RoboChartLib_Sequence" = "RoboChartLib_Sequence", "RoboChartLib_Relation" = "RoboChartLib_Relation", "RoboChartLib_Function" = "RoboChartLib_Function" }
+@test
+operation SkillsManagerActivationTransition_fun() {
+	"TEST - SkillsManagerActivationTransition_fun".println();
+	 
+	
+  // Get the expected result from the RoboChart model
+  var expectedTransition = Expected_RoboChart!Transition.allInstances().select(t | t.name = "HandleActivationReceive").unique();
+	
+  // Run the transformations
+  runTarget("runmodelmanagement.ra2rc");
+  runTarget("runmodelmanagement.rc2txt");
+  
+  // Call the method under test
+  var transition = SkillsManagerActivationTransition();
+
+  // Check for expected features
+  assertEquals("Name", expectedTransition.name, transition.name);
+  
+  assertEquals("Source name", expectedTransition.source.name, transition.source.name );
+  
+  assertEquals("Source Target", transition.source, transition.target );
+  
+  assertEquals("Trigger -type", expectedTransition.trigger._type, transition.trigger._type);
+  
+   assertEquals("Trigger - event name", expectedTransition.trigger.event.name, transition.trigger.event.name);
+  
+  assertEquals("Action assignmnet", expectedTransition.action.left.name.name, transition.action.left.name.name);
+  
+} 
+
+
+$onlyWith Map{ "RoboArch" = "RA_ReactiveSkillsMinimal", "RoboChart"="GenRC_ReactiveSkillsMinimal", "Expected_RoboChart"="RC_ReactiveSkillsMinimal", "RoboChartLib_Core" = "RoboChartLib_Core", "RoboChartLib_Set" = "RoboChartLib_Set", "RoboChartLib_Sequence" = "RoboChartLib_Sequence", "RoboChartLib_Relation" = "RoboChartLib_Relation", "RoboChartLib_Function" = "RoboChartLib_Function" }
+@test
+operation SkillsManagerDeactivationTransition_fun() {
+	"TEST - SkillsManagerDeactivationTransition_fun".println();
+	 
+	
+  // Get the expected result from the RoboChart model
+  var expectedTransition = Expected_RoboChart!Transition.allInstances().select(t | t.name = "HandleDeactivationReceive").unique();
+	
+  // Run the transformations
+  runTarget("runmodelmanagement.ra2rc");
+  runTarget("runmodelmanagement.rc2txt");
+  
+  // Call the method under test
+  var transition = SkillsManagerDeactivationTransition();
+
+  // Check for expected features
+  assertEquals("Name", expectedTransition.name, transition.name);
+  
+  assertEquals("Source name", expectedTransition.source.name, transition.source.name );
+  
+  assertEquals("Source Target", transition.source, transition.target );
+  
+  assertEquals("Trigger -type", expectedTransition.trigger._type, transition.trigger._type);
+  
+   assertEquals("Trigger - event name", expectedTransition.trigger.event.name, transition.trigger.event.name);
+  
+  assertEquals("Action assignmnet", expectedTransition.action.left.name.name, transition.action.left.name.name);
+  
+} 
+
+$onlyWith Map{ "RoboArch" = "RA_ReactiveSkillsMinimal", "RoboChart"="GenRC_ReactiveSkillsMinimal", "Expected_RoboChart"="RC_ReactiveSkillsMinimal", "RoboChartLib_Core" = "RoboChartLib_Core", "RoboChartLib_Set" = "RoboChartLib_Set", "RoboChartLib_Sequence" = "RoboChartLib_Sequence", "RoboChartLib_Relation" = "RoboChartLib_Relation", "RoboChartLib_Function" = "RoboChartLib_Function" }
+@test
+operation SkillsManagerGetParameterTransitions_fun() {
+ "TEST - SkillsManagerGetParameterTransitions_fun".println();
+  
+
+  // Get the expected result from the RoboChart model
+  var expectedTransitions = Expected_RoboChart!Transition.allInstances().select( t | t.name.startsWith("HandleGetParameterReceive") );
+  
+  // Run the transformations
+  runTarget("runmodelmanagement.ra2rc");
+  runTarget("runmodelmanagement.rc2txt");
+  
+  // Call the method under test
+  var skills : Set(RoboArch!Skills) = RoboArch!Skill.allInstances().asSet();
+  var transitions = SkillsManagerGetParameterTransitions( skills );
+  
+  // Check for expected features
+  assertEquals("No of transitions", expectedTransitions.size(), transitions.size() );
+  
+  // --Check each generated transition against those from the expected model.
+  for (expTransition: RoboChart!Transition in expectedTransitions){
+  	
+  	var genTransition = transitions.select(t | t.name = expTransition.name).unique();
+  	
+  	// --Each value to be handled has corresponding trigger event
+  	 assertEquals("Transition event of: " + expTransition.name, expTransition.trigger.event.name , genTransition.trigger.event.name );
+  }
+  
+}
+
+$onlyWith Map{ "RoboArch" = "RA_ReactiveSkillsMinimal", "RoboChart"="GenRC_ReactiveSkillsMinimal", "Expected_RoboChart"="RC_ReactiveSkillsMinimal", "RoboChartLib_Core" = "RoboChartLib_Core", "RoboChartLib_Set" = "RoboChartLib_Set", "RoboChartLib_Sequence" = "RoboChartLib_Sequence", "RoboChartLib_Relation" = "RoboChartLib_Relation", "RoboChartLib_Function" = "RoboChartLib_Function" }
+@test
+operation GetParameterTransition_fun() {
+	"TEST - GetParameterTransition_fun".println();
+	 
+
+  // Get the expected result from the RoboChart model
+  var expectedTransition = Expected_RoboChart!Transition.allInstances().select(t | t.name = "HandleGetParameterReceivegetRandomMovePriorityParameter").unique();
+ 
+  // Run the transformations
+  runTarget("runmodelmanagement.ra2rc");
+  runTarget("runmodelmanagement.rc2txt");
+  
+  // Call the method under test
+  var transition = GetParameterTransition("RandomMove", "Priority");
+  
+  // Check for expected features
+  assertEquals("Name", expectedTransition.name, transition.name);
+  
+  assertEquals("Source name", expectedTransition.source.name, transition.source.name );
+  
+  assertEquals("Source Target", transition.source, transition.target );
+  
+  assertEquals("Trigger", expectedTransition.trigger._type, transition.trigger._type);
+  
+  assertEquals("Action trigger", expectedTransition.action.trigger._type, transition.action.trigger._type);
+  
+} 
+
+
+$onlyWith Map{ "RoboArch" = "RA_ReactiveSkillsMinimal", "RoboChart"="GenRC_ReactiveSkillsMinimal", "Expected_RoboChart"="RC_ReactiveSkillsMinimal", "RoboChartLib_Core" = "RoboChartLib_Core", "RoboChartLib_Set" = "RoboChartLib_Set", "RoboChartLib_Sequence" = "RoboChartLib_Sequence", "RoboChartLib_Relation" = "RoboChartLib_Relation", "RoboChartLib_Function" = "RoboChartLib_Function" }
+@test
+operation SkillsManagerSetParameterTransitions_fun() {
+ "TEST - SkillsManagerSetParameterTransitions_fun".println();
+  
+
+  // Get the expected result from the RoboChart model
+  var expectedTransitions = Expected_RoboChart!Transition.allInstances().select( t | t.name.startsWith("HandleSetParameterReceive") );
+  
+  // Run the transformations
+  runTarget("runmodelmanagement.ra2rc");
+  runTarget("runmodelmanagement.rc2txt");
+  
+  // Call the method under test
+  var skills : Set(RoboArch!Skills) = RoboArch!Skill.allInstances().asSet();
+  var transitions = SkillsManagerSetParameterTransitions( skills );
+  
+  // Check for expected features
+  assertEquals("No of transitions", expectedTransitions.size(), transitions.size() );
+  
+  // --Check each generated transition against those from the expected model.
+  for (expTransition: RoboChart!Transition in expectedTransitions){
+  	
+  	var genTransition = transitions.select(t | t.name = expTransition.name).unique();
+  	
+  	// --Each value to be handled has corresponding trigger event
+  	 assertEquals("Transition event of: " + expTransition.name, expTransition.trigger.event.name , genTransition.trigger.event.name );
+  }
+  
+}
+
+
+$onlyWith Map{ "RoboArch" = "RA_ReactiveSkillsMinimal", "RoboChart"="GenRC_ReactiveSkillsMinimal", "Expected_RoboChart"="RC_ReactiveSkillsMinimal", "RoboChartLib_Core" = "RoboChartLib_Core", "RoboChartLib_Set" = "RoboChartLib_Set", "RoboChartLib_Sequence" = "RoboChartLib_Sequence", "RoboChartLib_Relation" = "RoboChartLib_Relation", "RoboChartLib_Function" = "RoboChartLib_Function" }
+@test
+operation SetParameterTransition_fun() {
+	"TEST - SetParameterTransition_fun".println();
+	 
+
+  // Get the expected result from the RoboChart model                                        
+  var expectedTransition = Expected_RoboChart!Transition.allInstances().select(t | t.name = "HandleSetParameterReceivesetRandomMovePriorityParameter").unique();
+ 
+  // Run the transformations
+  runTarget("runmodelmanagement.ra2rc");
+  runTarget("runmodelmanagement.rc2txt");
+  
+  // Call the method under test
+  var transition = SetParameterTransition("RandomMove", "Priority");
+  
+  // Check for expected features
+  assertEquals("Name", expectedTransition.name, transition.name);
+  
+  assertEquals("Source name", expectedTransition.source.name, transition.source.name );
+  
+  assertEquals("Source Target", transition.source, transition.target );
+  
+  assertEquals("Trigger", expectedTransition.trigger._type, transition.trigger._type);
+  
+  assertTrue("Action trigger", transition.action.isUndefined() );
+  
+} 
+*/
+
+$onlyWith Map{ "RoboArch" = "RA_ReactiveSkillsMinimal", "RoboChart"="GenRC_ReactiveSkillsMinimal", "Expected_RoboChart"="RC_ReactiveSkillsMinimal", "RoboChartLib_Core" = "RoboChartLib_Core", "RoboChartLib_Set" = "RoboChartLib_Set", "RoboChartLib_Sequence" = "RoboChartLib_Sequence", "RoboChartLib_Relation" = "RoboChartLib_Relation", "RoboChartLib_Function" = "RoboChartLib_Function" }
+@test
+operation SkillsManagerUpdateRecordState_fun() {
+	"TEST - SkillsManagerUpdateRecordState_fun".println();
+	 
+	
+  // Get the expected result from the RoboChart model                                        
+  var expectedState = Expected_RoboChart!State.allInstances().select(s | s.name = "UpdateRecord").unique();
+ 
+  // Run the transformations
+  runTarget("runmodelmanagement.ra2rc");
+  runTarget("runmodelmanagement.rc2txt");
+  
+  // Remove elements from the model that will be recreated by invoking the function under test
+  var state  = ref(expectedState.name, RoboChart!State);
+  delete state;
+  
+  // Call the method under test
+  var skills : Set(RoboArch!Skills) = RoboArch!Skill.allInstances().asSet();
+  var connections: Set(RoboArch!SkillConnection) = RoboArch!SkillConnection.allInstances().asSet();
+  
+  state = SkillsManagerUpdateRecordState(skills, connections);
+  
+  // Check for expected features
+  assertEquals("Name", expectedState.name, state.name);
+  
+  assertEquals("No of nodes", expectedState.nodes.size(), state.nodes.size() );
+  
+  for(expectedNode in expectedState.nodes){
+  	var genNode = state.nodes.select(n | n.name = expectedNode.name).unique();
+  	assertEquals("Node name: " + expectedNode.name, expectedNode.name, genNode.name );
+  }
+  
+  assertEquals("No of transitions", expectedState.transitions.size(), state.transitions.size() );
+  
+}
+
+
+$onlyWith Map{ "RoboArch" = "RA_ReactiveSkillsMinimal", "RoboChart"="GenRC_ReactiveSkillsMinimal", "Expected_RoboChart"="RC_ReactiveSkillsMinimal", "RoboChartLib_Core" = "RoboChartLib_Core", "RoboChartLib_Set" = "RoboChartLib_Set", "RoboChartLib_Sequence" = "RoboChartLib_Sequence", "RoboChartLib_Relation" = "RoboChartLib_Relation", "RoboChartLib_Function" = "RoboChartLib_Function" }
+@test
+operation UpdateRecordAddNextCycleSkillsComposite_fun() {
+	"TEST - UpdateRecordAddNextCycleSkillsComposite_fun".println();
+	
+  // Get the expected result from the RoboChart model                                        
+  var expectedState = Expected_RoboChart!State.allInstances().select(s | s.name = "AddNextCycleSkills").unique();
+ 
+  // Run the transformations
+  runTarget("runmodelmanagement.ra2rc");
+  runTarget("runmodelmanagement.rc2txt");
+  
+  // Call the method under test
+  var skills : Set(RoboArch!Skills) = RoboArch!Skill.allInstances().asSet();
+  
+  var state = UpdateRecordAddNextCycleSkillsComposite(skills);
+  
+  // Check for expected features
+  assertEquals("Name", expectedState.name, state.name);
+  
+  assertEquals("Actions", expectedState.actions.size(), state.actions.size() );
+  
+  if (state.actions.size() > 0){
+ 	 assertTrue( state.actions.unique().isTypeOf(RoboChart!EntryAction)) ;
+  }
+}
+
+$onlyWith Map{ "RoboArch" = "RA_ReactiveSkillsMinimal", "RoboChart"="GenRC_ReactiveSkillsMinimal", "Expected_RoboChart"="RC_ReactiveSkillsMinimal", "RoboChartLib_Core" = "RoboChartLib_Core", "RoboChartLib_Set" = "RoboChartLib_Set", "RoboChartLib_Sequence" = "RoboChartLib_Sequence", "RoboChartLib_Relation" = "RoboChartLib_Relation", "RoboChartLib_Function" = "RoboChartLib_Function" }
+@test
+operation SkillUpdateValueToFromTransitions_fun() {
+	"TEST - SkillUpdateValueToFromTransitions_fun".println();
+
+  // Run the transformations
+  runTarget("runmodelmanagement.ra2rc");
+  runTarget("runmodelmanagement.rc2txt");
+  
+  
+  // Call the method under test
+  var skills : Set(RoboArch!Skills) = RoboArch!Skill.allInstances().asSet();
+  var firstSkillName = skills.first().name;
+  
+  var transitions =  SkillUpdateValueToFromTransitions( firstSkillName );
+  
+  // Check for expected features
+  
+  // -- There are 2 transtions, one from and one to
+  assertEquals("No of transitions", 2, transitions.size() );
+  
+  // -- One of the transitions is from select junction
+  assertTrue("From", transitions.one( t | t.source.name = "ExecutingSkillSelect" and  t.source.isTypeOf(RoboChart!Junction) and t.source <> t.target) );
+   
+
+  // -- One of the transitions is to AddNextSkillCycleSkills state  
+  assertTrue( "To", transitions.one( t | t.target.name = "AddNextCycleSkills" and  t.target.isTypeOf(RoboChart!State) and t.source <> t.target) );
+}
+
+
+$onlyWith Map{ "RoboArch" = "RA_ReactiveSkillsMinimal", "RoboChart"="GenRC_ReactiveSkillsMinimal", "Expected_RoboChart"="RC_ReactiveSkillsMinimal", "RoboChartLib_Core" = "RoboChartLib_Core", "RoboChartLib_Set" = "RoboChartLib_Set", "RoboChartLib_Sequence" = "RoboChartLib_Sequence", "RoboChartLib_Relation" = "RoboChartLib_Relation", "RoboChartLib_Function" = "RoboChartLib_Function" }
+@test
+operation SkillUpdateValueReceiveTransition_fun() {
+	"TEST - SkillUpdateValueReceiveTransition_fun".println();
+	
+  // Get the expected result from the RoboChart model                                        
+  var expectedTransition = Expected_RoboChart!Transition.allInstances().select(s | s.name.startsWith("ValueReceive") ).unique();
+	
+  // Run the transformations
+  runTarget("runmodelmanagement.ra2rc");
+  runTarget("runmodelmanagement.rc2txt");
+  
+  
+  // Call the method under test
+  var tesSkillName = "RandomMove";
+  var connections : Set(RoboArch!SkillConnection) = RoboArch!SkillConnection.allInstances().asSet().select(c | c.start.name = tesSkillName);
+    
+  var transition =  SkillUpdateValueReceiveTransition(tesSkillName , "vOut", connections) ;
+  
+  
+  // Check for expected features  
+  	//--name
+  	 assertEquals("Name", expectedTransition.name, transition.name );
+  	 
+  	//--Source
+  	assertEquals("Source", expectedTransition.source.name, transition.source.name);
+  	
+  	//--Target equals source
+  	assertEquals("Target = source", transition.source, transition.target);
+  
+	//--there is an input event 
+	assertTrue("Input event", transition.trigger._type = RoboChart!TriggerType#INPUT );
+	
+	//--update value called 
+	assertEquals("Update Value", expectedTransition.action.right.`function`.ref.name, transition.action.right.`function`.ref.name);
+
+	assertTrue("ecore equals ",  ecoreUtil.equals(expectedTransition, transition) );
+}
+
+
+
+$onlyWith Map{ "RoboArch" = "RA_ReactiveSkillsMinimal", "RoboChart"="GenRC_ReactiveSkillsMinimal", "Expected_RoboChart"="RC_ReactiveSkillsMinimal", "RoboChartLib_Core" = "RoboChartLib_Core", "RoboChartLib_Set" = "RoboChartLib_Set", "RoboChartLib_Sequence" = "RoboChartLib_Sequence", "RoboChartLib_Relation" = "RoboChartLib_Relation", "RoboChartLib_Function" = "RoboChartLib_Function" }
+@test
+operation AddNextCycleSkillConditional_fun() {
+	"TEST - AddNextCycleSkillConditional_fun".println();
+	
+  // also tests called methods: AlreadyAddedCycleSkillsCheck, AddSkillToCycleSkills, ClearSkillNewValueFlags
+  // coverage dependant on model inputs
+	
+  // Get the expected result from the RoboChart model                                        
+  var expectedState = Expected_RoboChart!State.allInstances().select(s | s.name = "AddNextCycleSkills").unique();
+  var expectedStatements = expectedState.actions;
+  
+  // Run the transformations
+  runTarget("runmodelmanagement.ra2rc");
+  runTarget("runmodelmanagement.rc2txt");
+  
+  
+  // Call the method under test - in this case indirectly
+  var skills : Set(RoboArch!Skills) = RoboArch!Skill.allInstances().asSet();  
+  var state = UpdateRecordAddNextCycleSkillsComposite(skills);
+    
+  var statements = state.actions;
+  
+  
+  // Check for expected features  
+
+	assertTrue("ecore equals ",  ecoreUtil.equals(expectedStatements, statements) );
+}
+
+/*
+
+SkillsManagerCleanupState
+SkillsManagerDoNextSkillState
+SkillsManagerCheckMonitorsState
+
+@test
+operation SkillUpdateValueTransitions_fun() {
+	"TEST - SkillUpdateValueTransitions_fun".println();
+	
+}
+*/

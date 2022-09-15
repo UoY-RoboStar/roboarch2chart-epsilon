@@ -1,0 +1,602 @@
+/********************************************************************************
+ * Copyright (c) 2022 University of York and others
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0.
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ *
+ * Contributors:
+ *   William Barnett - initial definition
+ ********************************************************************************/
+
+import "../common/RA2RC-TopLevel.eol";
+import "../common/RA2RC-Functions.eol";
+import "../common/RoboChart.eol";
+
+
+/*-----------------------------------
+ * Names
+ *-----------------------------------*/
+ 
+ 
+  operation SkillsEnumName() : String {
+	return "Skills";
+}
+
+ 
+   operation SkillLiteralName(skill: String) : String {
+	return skill.toUpperCase();
+}
+ 
+  operation EventsEnumName() : String {
+	return "Events";
+} 
+ 
+   operation EventLiteralName(monitor: String) : String {
+	return monitor.toUpperCase();
+}
+ 
+ operation SkillEventName( skill : String, io: String ) : String {
+	return skill + io;
+}
+
+ operation SkillParamEventName( skill : String, param: String ) : String {
+	return skill + param + ParameterPostfix();
+}
+
+ operation SkillParamVariableName( param: String ) : String {
+	return param + ParameterPostfix();
+}
+
+
+// ReactiveSkills Interface Names
+
+ operation ActiveSkillsRequestName() : String {
+	return "getActiveSkills";
+}
+
+ operation ActiveSkillsReturnName() : String {
+	return "activeSkills";
+}
+
+ operation MonitoredEventReturnName() : String {
+	return "eventReply";
+}
+
+
+ operation ActivationRequestName() : String {
+	return "activate";
+}
+
+ operation DeactivationRequestName() : String {
+	return "deactivate";
+}
+
+ operation SkillParameterGetRequestName(skill:String, param:String) : String {
+	return "get" + skill + param.firstToUpperCase() + "Parameter";
+}
+
+ operation SkillParameterSetRequestName(skill:String, param:String) : String {
+	return "set" + skill + param.firstToUpperCase() + "Parameter";
+}
+
+ operation SkillParameterReturnName(skill:String, param:String) : String {
+	return skill.firstToLowerCase() + param.firstToUpperCase() + "Parameter";
+}
+
+ operation SkillValueRequestName(skill: String, io: String): String {
+	return "get" + skill + io.firstToUpperCase() + "Value";
+}
+
+
+ operation SkillValueReturnName(skill: String, io: String): String {
+	return  skill + io + "Value";
+}
+
+
+ operation SkillCompleteEventName(skill: String): String {
+	return  "complete" + skill ;
+}
+
+
+
+
+ 
+ operation DSkillPlatformActuationInterface( skill : String  ) : String {
+	return InterfacePrefix() + skill + PlatformActuationPostfix();
+}
+
+operation DSkillPlatformSensingInterface( skill : String ) : String {
+	return InterfacePrefix() + skill + PlatformSensingPostfix();
+}
+
+operation DSkillSenseGuardConditionName( param : String ) : String {
+	return param + "SenseReceived";
+}
+
+ operation PriorityParamName() : String {
+ 	return "Priority";
+ } 
+ 
+ operation PlatformActuationPostfix() : String {
+ 	return "PlatformActuation";
+ }
+ 
+ operation PlatformSensingPostfix() : String {
+ 	return "PlatformSensing";
+ }
+ 
+
+ operation ParameterPostfix() : String {
+ 	return "Param";
+ }
+ 
+ operation ParameterInitialisationPostfix() : String {
+ 	return "Initialised";
+ }
+ 	
+
+ operation DSkillPlatformEventName(skill: String, identifier: String) : String {
+ 	return skill + identifier + "Platform";
+ }
+ 
+  operation SkillVariableName(io: String) : String {
+ 	return io;
+ }
+
+ operation SkillsManagerName() : String {
+ 	return "SkillsManager";
+ } 
+ 
+ operation SkillInterfaceName(skill: String) : String {
+ 	return InterfacePrefix() + skill;
+ } 
+ 
+ operation SkillPackageName(skill: RoboArch!Skill) : String {
+ 	return CLAYER_IMPORT + rc_separator() + skill.type.name + rc_separator()  + skill.name;
+ } 
+ 
+ operation SkillsManagerExecutingSkillName(skill: String) : String {
+ 	return "Executing" + skill;
+ } 
+ 
+ operation SkillsManagerNewInputFlagName(skill: String, io: String) : String {
+ 	return "new" + SkillEventName(skill, io);
+ } 
+
+ 
+  operation SkillsManagerInputOutputVariableName(skill: String, io: String) : String {
+ 	return "current" + SkillEventName(skill, io);
+ } 
+ 
+ 
+ //Skills Manager State Names
+ operation SkillsManagerInitialName():String {
+	return "SkillsManagerInitial";
+}
+
+ operation SkillsManagerInitialiseName():String {
+	return "Initialise";
+}
+
+ operation SkillsManagerHandleRequestsName():String {
+	return "HandleRequests";
+}
+
+operation SkillsManagerDoNextSkillName():String {
+	return "DoNextSkill";
+}
+
+
+operation SkillsManagerUpdateRecordName():String {
+	return "UpdateRecord";
+}
+
+ operation SkillsManagerCheckMonitorsName():String {
+	return "CheckMonitors";
+}
+
+ operation SkillsManagerCleanupName():String {
+	return "Cleanup";
+}
+
+
+// Skills Manager update value function
+operation SkillsManagerFunctionUpdateValueName():String {
+	return "UpdateValue";
+}
+
+
+//  Skills Manager Variable Names
+
+ operation SkillsManagerVarCurrentActiveSkillsName():String {
+	return "currentlyActiveSkills";
+}
+
+
+
+ operation SkillsManagerVarActivationRequestName():String {
+	return "activationRequest";
+}
+
+ operation SkillsManagerVarCurrentActiveMonitorsName():String {
+	return "currentlyActiveMonitors";
+}
+
+ operation SkillsManagerVarMonitorRequestName():String {
+	return "monitorRequest";
+}
+
+ operation SkillsManagerVarExecutingSkillName():String {
+	return "executingSkill";
+}
+
+	 operation SkillsManagerVarUpdateRecordCompleteName():String {
+	return "updateRecordComplete";
+}
+
+ operation SkillsManagerVarCycleSkillsName():String {
+	return "cycleSkills";
+}
+
+ operation SkillsManagerVarNextCycleSkillsName():String {
+	return "nextCycleSkills";
+}
+
+operation SkillsManagerVarParameterName(skill: String, param: String){
+	return skill.firstToLowerCase() + param;
+}
+
+
+//  Skills Manager Constant Names
+ operation SkillsManagerConstRequestHandlingDelayName():String {
+	return "REQUEST_HANDLING_DELAY";
+}
+
+ operation SkillsManagerConstAsyncSkillsName():String {
+	return "ASYNCHRONOUS_SKILLS";
+}
+
+
+
+//  Skills Manager Clock Names
+
+ operation SkillsManagerClockRequestHandlingName():String {
+	return "requestHandling";
+}
+
+
+// Skills Manager UpdateRecord composite names
+ operation UpdateRecordAddNextCycleSkillsName():String {
+	return "AddNextCycleSkills";
+}
+
+ operation UpdateRecordUpdateValuesName(skill: String):String {
+	return "UpdateValues" + skill;
+}
+
+ operation UpdateRecordSkillSelectJunctionName():String {
+	return "ExecutingSkillSelect";
+}
+
+ operation UpdateRecordFinalName():String {
+	return "UpdateRecordFinal";
+}
+
+
+
+
+
+
+
+/*-----------------------------------
+ * Functions
+ *-----------------------------------*/ 
+
+operation ReactiveSkillsLayerInterfaceInputs (amrsl: RoboArch!ControlLayer) : Set(RoboChart!Events) {
+	var ips: Set(RoboChart!Events);
+	
+	ips.addAll( amrsl.equivalent("ReactiveSkillsLayerInterfaceInputs").asSet() );
+	
+	return ips;
+}
+
+operation ReactiveSkillsLayerInterfaceOutputs (amrsl: RoboArch!ControlLayer) : Set(RoboChart!Events) {
+	var ops: Set(RoboChart!Events);
+	
+	ops.addAll( amrsl.equivalent("ReactiveSkillsLayerInterfaceOutputs").asSet() );
+	
+	return ops;
+}
+
+$pre amrsl.pattern.isTypeOf( RoboArch!ReactiveSkills )
+operation ReactiveSkillsLayerPlatformConnections (amclyr: Set(RoboArch!ControlLayer), rcrp: Set(RoboChart!RoboticPlatform)) : Set(RoboChart!Connection) {
+	printDebug("STUB ReactiveSkillsLayerPlatformConnections");
+	
+	var connections: Set(RoboChart!Connection);
+
+	//TODO
+	
+	return connections;
+}
+
+operation SkillToStateMachine(amsk: RoboArch!Skill): RoboChart!StateMachineRef{
+	printDebug("SkillToStateMachine");
+	
+	var rcsk: RoboChart!StateMachineRef;
+	
+	rcsk = amsk.equivalent("CSkillToStateMachine", "DSkillToStateMachine");
+	
+	return rcsk;
+}
+
+operation SkillToInterface(amskl: RoboArch!Skill): RoboChart!Interface{
+	printDebug("SkillToInterface");
+	
+	var rcskl: RoboChart!Interface;
+	
+	rcskl = amskl.equivalent("CSkillToInterface", "DSkillToInterface");
+	
+	return rcskl;
+}
+
+
+operation SkillsToSkillEnumeration( amskls: Collection(RoboArch!Skill) ): RoboChart!Enumeration{
+	var rcskl: RoboChart!Enumeration;
+
+	rcskl = amskls.random().eContainer().equivalent("SkillsToSkillEnumeration");
+
+	return rcskl;
+}
+
+
+operation  MonitorsToEventEnumeration( ammons: Collection(RoboArch!Monitor) ): RoboChart!Enumeration{
+	var rceve : RoboChart!Enumeration;
+
+	/* Get SkillsManager (guaranteed to be one as part of architecture) to use for invoking equivalent
+       as there may be no monitors.
+              - Not ideal but arises due to the paradigm difference between rules and implementation.
+     */
+
+	rceve = RoboArch!SkillsManager.allInstances.unique().equivalent("MonitorsToEventEnumeration");
+
+	return rceve;
+}
+
+operation SkillsManagerToStateMachine( amskm: RoboArch!SkillsManager, skls: Set(RoboArch!Skills) ): RoboChart!StateMachineRef {
+
+	var amrsl = amskm.eContainer().eContainer();
+	
+ 	var rcskm = amrsl.equivalent("SkillsManagerToStateMachine");
+ 	
+ 	return rcskm;
+}
+
+
+operation SkillsManagerToConnections( amclyr: Set(RoboArch!ControlLayer) ): Set(RoboChart!Connections) {
+	printDebug("SkillsManagerToConnections");
+	
+	var cLayer = amclyr.unique();
+	
+	var rmsmc: Set( RoboChart!Connection );
+	
+	//Interskill connections
+	for (cn: RoboArch!SkillConnection in cLayer.pattern.skillsManager.interskillconnections) {
+		rmsmc.add( cn.equivalent("SkillConnectionToConnection") );
+	}
+	
+	printDebug("@@ clyr " + amclyr.asString() );
+	printDebug("@@ clyr2ctl " + ControlLayerToController(amclyr).asString() );
+	printDebug("@@ u clyr2ctl" + ControlLayerToController(amclyr).unique().asString() );
+	
+	//Skills manager to each skill.
+	for(skl: RoboArch!Skill in cLayer.pattern.skills){
+		rmsmc.addAll(
+					GetConnectionsForCommonInterface( cLayer.equivalent("SkillsManagerToStateMachine"),
+									  skl.equivalent("CSkillToStateMachine", "DSkillToStateMachine", "MSkillToStateMachine"),
+									  InterfacePrefix() + skl.name,
+									  Set{},
+									  skl.equivalent("CSkillToInterface", "DSkillToInterface", "MSkillToInterface").events	)
+		
+		);
+	}
+	
+	//Skills manager to the containing controller.
+	rmsmc.addAll( 
+		GetConnectionsForCommonInterface( cLayer.equivalent("SkillsManagerToStateMachine"),
+										  ControlLayerToController(amclyr).unique().ref,
+										  InterfacePrefix() + cLayer.name.toLowerCase().firstToUpperCase(),
+										  LayerInterfaceInputs(cLayer),
+										  LayerInterfaceOutputs(cLayer)	)
+	);
+	
+	
+	return rmsmc;
+}
+
+operation SkillConnectionToConnection( amskc: RoboArch!SkillConnection, amclyr: RoboArch!ControlLayer ): RobChart!Connection {
+	printDebug("STUB SkillConnectionToConnection");
+	
+	var rcskc: RoboChart!Connection;
+	
+	return rcskc;
+}
+
+
+//--------------------------------------------------------------
+// Old rules (below) need to review if they are skill needed 
+
+
+operation AddDeactivatedCompositeStates(parentState: RoboChart!State){
+
+   /*******************
+    *  States
+	*******************/
+
+	var initialJunction = new RoboChart!Initial;
+	initialJunction.name = "Initial";
+	
+	parentState.nodes.add( initialJunction );
+	
+	//Cleanup
+	var cleanupState = new RoboChart!State;
+	cleanupState.name = "Cleanup";
+	
+	parentState.nodes.add( cleanupState );
+	
+	//Waiting
+	var waitingState = new RoboChart!State;
+	waitingState.name = "Waiting";
+	
+	parentState.nodes.add( waitingState );
+	
+	
+   /*******************
+    *  Transitions
+	*******************/
+	
+	var initialToCleanup = new RoboChart!Transition;
+	initialToCleanup.name = "InitialToCleanup";
+	initialToCleanup.source = initialJunction;
+	initialToCleanup.target = cleanupState;
+	parentState.transitions.add( initialToCleanup );
+	
+	var cleanupToWaiting = new RoboChart!Transition;
+	cleanupToWaiting.name = "CleanupToWaiting";
+	cleanupToWaiting.source = cleanupState;
+	cleanupToWaiting.target = waitingState;
+	parentState.transitions.add( cleanupToWaiting );	
+	
+}
+
+
+
+
+operation AddActivatedCompositeStates(parentState: RoboChart!State){
+
+   /*******************
+    *  States
+	*******************/
+
+	var initialJunction = new RoboChart!Initial;
+	initialJunction.name = "Initial";
+	
+	parentState.nodes.add( initialJunction );
+	
+	//Startup
+	var startupState = new RoboChart!State;
+	startupState.name = "Startup";
+	
+	parentState.nodes.add( startupState );
+	
+	//Ready
+	var readyState = new RoboChart!State;
+	readyState.name = "Ready";
+	
+	parentState.nodes.add( readyState );
+	
+	//ComputeOutputs
+	var computoutputsState = new RoboChart!State;
+	computoutputsState.name = "ComputeOutputs";
+	
+	parentState.nodes.add( computoutputsState );
+	
+	
+   /*******************
+    *  Transitions
+	*******************/
+	
+	var initialToStartup = new RoboChart!Transition;
+	initialToStartup.name = "InitialToStartup";
+	initialToStartup.source = initialJunction;
+	initialToStartup.target = startupState;
+	parentState.transitions.add( initialToStartup );
+	
+	var startupToReady = new RoboChart!Transition;
+	startupToReady.name = "StartupToReady";
+	startupToReady.source = startupState;
+	startupToReady.target = readyState;
+	parentState.transitions.add( startupToReady );
+	
+	var ReadyToComputeOutputs = new RoboChart!Transition;
+	ReadyToComputeOutputs.name = "ReadyToComputeOutputs";
+	ReadyToComputeOutputs.source = readyState;
+	ReadyToComputeOutputs.target = computoutputsState;
+	parentState.transitions.add( ReadyToComputeOutputs );
+}
+
+
+
+
+
+operation GetSkillMachineFromRCPackage(package:RoboChart!RCPackage): RoboChart!StateMachineDef{
+
+	//Get the skill's interface reference from the provided package.
+	if( package.machines.size() <> 1 ){
+		throw "Error: A skill must have one machine.";
+	}
+
+	return package.machines.first();
+}
+
+
+/*	Creates get set events interface pattern for each provided parameter event.
+
+		Note: the provided event is re-used for the value event.
+ */
+operation ParameterEventsToInterfaceEvents(parameterEvents:Collection(RoboChart!Event)){
+	var interfaceEvents: Sequence(RoboChart!Events);
+
+	for(event: RoboChart!Event in parameterEvents){
+		//get
+		var getEvent = CreateRCEvent( "get" + event.name.firstToUpperCase(), event.type );
+		interfaceEvents.add(getEvent);
+
+		//set
+		var setEvent = CreateRCEvent("set" + event.name.firstToUpperCase(), event.type);
+		interfaceEvents.add(setEvent);
+
+		//value
+		interfaceEvents.add(event);
+	}
+
+	return interfaceEvents;
+}
+
+operation getSkillsManagerMachineFromRCPackages(packages:Collection(RoboChart!RCPackage)):RoboChart!StateMachineDef{
+	if(packages.size() <> 1){
+		throw "Error: A skills manager must have a one package";
+	}
+
+	var managerPackage = packages.first();
+
+	if (managerPackage.machines.size() <> 1){
+		throw "Error: The Skills Manager machine must have one machine.";
+	} else {
+		return managerPackage.machines.first();
+	}
+}
+
+/*
+	Replaces the skills connections refs from MachineDefs to MachineRefs from
+	the provided list of references.
+*/
+operation UpdateSkillConnectionReferences(connections: Collection(RoboChart!Connection), machineReferences:Collection(Robochart!SateMachineRef)){
+
+	for(connection: RoboChart!Connection in connections){
+
+		if ( not machineReferences.one(mr | mr.name == connection.from.name) ){
+			throw "Error: No unique reference could be found - from node.";
+		}
+
+		if ( not machineReferences.one(mr | mr.name == connection.to.name) ){
+			throw "Error: No unique reference could be found - to node.";
+		}
+
+		connection.from = machineReferences.selectOne(mr | mr.name == connection.from.name);
+		connection.to = machineReferences.selectOne(mr | mr.name == connection.to.name);
+	}
+
+}

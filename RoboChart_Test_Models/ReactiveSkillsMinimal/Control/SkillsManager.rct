@@ -1,0 +1,299 @@
+package Control::SkillsManager
+
+import Types::* 
+import set_toolkit::*
+import sequence_toolkit::*
+import Control::DSkill::Move::* 
+import Control::CSkill::RandomMove::* 
+
+
+
+
+
+stm SkillsManager { 
+	
+	
+	uses IControl
+	uses IMove
+	uses IRandomMove
+	
+	
+	
+	
+	var nextCycleSkills : Seq( Skills )  , executingSkill : Skills , currentlyActiveSkills : Set( Skills )  , cycleSkills : Seq( Skills )  , updateRecordComplete : boolean , activationRequest : Skills , newRandomMovevOut : boolean , newMovevIn : boolean , randomMovePriority : nat , movePriority : nat , currentRandomMovevOut : Velocities * nat , currentMovevIn : Velocities * nat 
+	 const ASYNCHRONOUS_SKILLS : Seq( Skills )  , REQUEST_HANDLING_DELAY : nat 
+	
+	clock requestHandling 
+
+	 state HandleDeactivation { 
+	}
+
+	 state HandleActiveSkills { 
+	}
+
+	initial Initial
+
+	 state DoNextSkill { 
+	}
+
+	 state ExecutingMove { 
+	}
+
+	 state UpdateRecord { 
+		entry updateRecordComplete = 	false  
+	
+		initial UpdateRecordInitial
+	
+		junction ExecutingSkillSelect
+	
+		 state AddNextCycleSkills { 
+
+		}
+	
+		final UpdateRecordFinal
+	
+		 state UpdateValuesRandomMove { 
+		}
+		
+		 state UpdateValuesMove { 
+		}
+	
+		transition UpdateRecordInitialToExecutingSkillSelect {
+			from UpdateRecordInitial
+			to ExecutingSkillSelect
+		}
+	
+		transition AddNextCycleSkillsToFinal {
+			from AddNextCycleSkills
+			to UpdateRecordFinal
+		}	
+		 
+
+		transition SkillSelectToUpdateValuesMove {
+			from ExecutingSkillSelect
+			to UpdateValuesMove
+			condition 	executingSkill == Skills::MOVE  
+		
+		}
+
+		transition SkillSelectToUpdateValuesRandomMove {
+			from ExecutingSkillSelect
+			to UpdateValuesRandomMove
+			condition 	executingSkill == Skills::RANDOMMOVE  
+		
+		}
+
+		transition UpdateValuesMoveToAddNextCycleSkills {
+			from UpdateValuesMove
+			to AddNextCycleSkills
+			trigger completeMove 
+		}
+
+		transition UpdateValuesRandomMoveToAddNextCycleSkills {
+			from UpdateValuesRandomMove
+			to AddNextCycleSkills
+			trigger completeRandomMove 
+		}	
+		
+		transition ValueReceiveRandomMovevOut {
+			from UpdateValuesRandomMove
+			to UpdateValuesRandomMove
+			trigger RandomMovevOut ? currentRandomMovevOut 
+		  	action newMovevIn = 	UpdateValue( currentMovevIn, currentRandomMovevOut )   
+		
+		}
+	}
+
+	 state ExecutingRandomMove { 
+	}
+
+	 state HandleValueQueries { 
+	}
+
+	 state HandleActivation { 
+	}
+
+	 state HandleGetParameter { 
+	}
+
+	 state Initialise { 
+		entry currentlyActiveSkills = 	{  }   
+		; cycleSkills = 	<  >   
+		; nextCycleSkills = 	<  >   
+		; newMovevIn = 	false  
+		; # requestHandling 
+	
+	}
+
+	 state Cleanup { 
+	}
+
+	 state CheckMonitors { 
+	}
+
+	 state HandleSetParameter { 
+	}
+
+	transition HandleActivationToHandleDeactivation {
+		from HandleActivation
+		to HandleDeactivation
+		condition 	since( requestHandling )  > REQUEST_HANDLING_DELAY  
+	
+	  	action # requestHandling 
+	}
+
+	transition HandleDeactivationToHandleGetParameter {
+		from HandleDeactivation
+		to HandleGetParameter
+		condition 	since( requestHandling )  > REQUEST_HANDLING_DELAY  
+	
+	  	action # requestHandling 
+	}
+
+	transition HandleGetParameterToHandleSetParameter {
+		from HandleGetParameter
+		to HandleSetParameter
+		condition 	since( requestHandling )  > REQUEST_HANDLING_DELAY  
+	
+	  	action # requestHandling 
+	}
+
+	transition HandleValueQueriesToHandleActiveSkills {
+		from HandleValueQueries
+		to HandleActiveSkills
+		condition 	since( requestHandling )  > REQUEST_HANDLING_DELAY  
+	
+	  	action # requestHandling 
+	}
+
+	transition HandleSetParameterToDoNextSkill {
+		from HandleSetParameter
+		to DoNextSkill
+		condition 	since( requestHandling )  > REQUEST_HANDLING_DELAY  
+	
+	  	action # requestHandling 
+	}
+
+	transition ExecutingRandomMoveToUpdateRecord {
+		from ExecutingRandomMove
+		to UpdateRecord
+	}
+	
+	transition HandleDeactivationReceive {
+		from HandleDeactivation
+		to HandleDeactivation
+		trigger deactivate ? activationRequest 
+	  	action currentlyActiveSkills = 	diff( currentlyActiveSkills, { activationRequest }  )   
+	
+	}
+	
+	transition HandleActivationReceive {
+		from HandleActivation
+		to HandleActivation
+		trigger activate ? activationRequest 
+	  	action currentlyActiveSkills = 	union( currentlyActiveSkills, { activationRequest }  )   
+	
+	}
+
+	transition CheckMonitorsToDoNextSkill {
+		from CheckMonitors
+		to DoNextSkill
+	}
+
+	transition CheckMonitorsToCleanup {
+		from CheckMonitors
+		to Cleanup
+	}
+	
+	transition HandleGetParameterReceivegetMovePriorityParameter {
+		from HandleGetParameter
+		to HandleGetParameter
+		trigger getMovePriorityParameter 
+	  	action movePriorityParameter ! 	movePriority  
+	 
+	}
+	
+	transition HandleActiveSkillsReceive {
+		from HandleActiveSkills
+		to HandleActiveSkills
+		trigger getActiveSkills 
+	  	action activeSkills ! 	currentlyActiveSkills  
+	 
+	}
+	
+	transition HandleSetParameterReceivesetMovePriorityParameter {
+		from HandleSetParameter
+		to HandleSetParameter
+		trigger setMovePriorityParameter ? movePriority 
+	}
+
+	transition UpdateRecordToCheckMonitors {
+		from UpdateRecord
+		to CheckMonitors
+	}
+
+	transition HandleValueQueriesReceivegetRandomMoveVOutValue {
+		from HandleValueQueries
+		to HandleValueQueries
+		trigger getRandomMoveVOutValue 
+	  	action RandomMovevOutValue ! 	( currentRandomMovevOut[1] )   
+	 
+	}
+
+	transition CleanupToHandleValueQueries {
+		from Cleanup
+		to HandleValueQueries
+	}
+
+	transition HandleActiveSkillsToHandleActivation {
+		from HandleActiveSkills
+		to HandleActivation
+		condition 	since( requestHandling )  > REQUEST_HANDLING_DELAY  
+	
+	  	action # requestHandling 
+	}
+
+	transition ExecutingMoveToUpdateRecord {
+		from ExecutingMove
+		to UpdateRecord
+	}
+	
+	transition HandleGetParameterReceivegetRandomMovePriorityParameter {
+		from HandleGetParameter
+		to HandleGetParameter
+		trigger getRandomMovePriorityParameter 
+	  	action randomMovePriorityParameter ! 	randomMovePriority  
+	 
+	}
+
+	transition HandleSetParameterReceivesetRandomMovePriorityParameter {
+		from HandleSetParameter
+		to HandleSetParameter
+		trigger setRandomMovePriorityParameter ? randomMovePriority 
+	}
+
+	transition DoNextSkillToExecutingRandomMove {
+		from DoNextSkill
+		to ExecutingRandomMove
+	}
+
+	transition InitialiseToHandleValueQueries {
+		from Initialise
+		to HandleValueQueries
+	}
+
+	transition InitialToInitialise {
+		from Initial
+		to Initialise
+	}
+
+	transition DoNextSkillToExecutingMove {
+		from DoNextSkill
+		to ExecutingMove
+	}
+
+	 
+} 
+
+
+

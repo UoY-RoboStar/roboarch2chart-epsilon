@@ -1,0 +1,131 @@
+package Control
+
+import Types::* 
+import Control::SkillsManager::* 
+import Control::DSkill::Move::* 
+import Control::DSkill::Proximity::* 
+import Control::CSkill::Explore::* 
+
+
+
+
+
+controller Control {
+	
+	
+	uses IControl
+	uses IMovePlatformSensing
+	uses IMovePlatformActuation
+	uses IProximityPlatformSensing
+	uses IProximityPlatformActuation
+
+	sref Move = Move
+
+	sref Proximity = Proximity
+
+	sref Explore = Explore
+
+	sref SkillsManager = SkillsManager
+
+	connection SkillsManager on ExplorevOut to Explore on ExplorevOut
+
+	connection Control on setProximityPriorityParameter to SkillsManager on setProximityPriorityParameter
+
+	connection Control on setExploreMaxSpeedParameter to SkillsManager on setExploreMaxSpeedParameter
+
+	connection Proximity on gap to Explore on obstacleDistance ( _async ) 
+
+	connection Control on getExploreMaxSpeedParameter to SkillsManager on getExploreMaxSpeedParameter
+
+	connection Control on activate to SkillsManager on activate
+
+	connection Control on initiateEventMonitor to SkillsManager on initiateEventMonitor
+
+	connection SkillsManager on movePriorityParameter to Control on movePriorityParameter
+
+	connection Control on getExploreVOutValue to SkillsManager on getExploreVOutValue
+
+	connection SkillsManager on ProximityPriorityParam to Proximity on ProximityPriorityParam
+
+	connection Control on getExplorePriorityParameter to SkillsManager on getExplorePriorityParameter
+
+	connection Explore on vOut to Move on vIn ( _async ) 
+
+	connection SkillsManager on ExploreobstacleDistance to Explore on ExploreobstacleDistance
+
+	connection Control on getMovePriorityParameter to SkillsManager on getMovePriorityParameter
+
+	connection SkillsManager on executeExplore to Explore on executeExplore
+
+	connection SkillsManager on activeSkills to Control on activeSkills
+
+	connection SkillsManager on activateExplore to Explore on activateExplore
+
+	connection SkillsManager on activateProximity to Proximity on activateProximity
+
+	connection Control on setMovePriorityParameter to SkillsManager on setMovePriorityParameter
+
+	connection Control on setExplorePriorityParameter to SkillsManager on setExplorePriorityParameter
+
+	connection Proximity on completeProximity to SkillsManager on completeProximity
+
+	connection SkillsManager on Proximitygap to Proximity on Proximitygap
+
+	connection SkillsManager on deactivateExplore to Explore on deactivateExplore
+
+	connection SkillsManager on MovePriorityParam to Move on MovePriorityParam
+
+	connection SkillsManager on deactivateProximity to Proximity on deactivateProximity
+
+	connection SkillsManager on ExploresafetyDistanceParam to Explore on ExploresafetyDistanceParam
+
+	connection SkillsManager on proximityPriorityParameter to Control on proximityPriorityParameter
+
+	connection Control on getProximityPriorityParameter to SkillsManager on getProximityPriorityParameter
+
+	connection Control on getActiveSkills to SkillsManager on getActiveSkills
+
+	connection SkillsManager on ProximitygapValue to Control on ProximitygapValue
+
+	connection SkillsManager on executeProximity to Proximity on executeProximity
+
+	connection Move on completeMove to SkillsManager on completeMove
+
+	connection SkillsManager on exploreMaxSpeedParameter to Control on exploreMaxSpeedParameter
+
+	connection SkillsManager on executeMove to Move on executeMove
+
+	connection SkillsManager on exploreSafetyDistanceParameter to Control on exploreSafetyDistanceParameter
+
+	connection Control on deactivate to SkillsManager on deactivate
+
+	connection SkillsManager on ExplorevOutValue to Control on ExplorevOutValue
+
+	connection SkillsManager on MovevIn to Move on MovevIn
+
+	connection SkillsManager on deactivateMove to Move on deactivateMove
+
+	connection Control on setExploreSafetyDistanceParameter to SkillsManager on setExploreSafetyDistanceParameter
+
+	connection SkillsManager on ExploremaxSpeedParam to Explore on ExploremaxSpeedParam
+
+	connection Explore on completeExplore to SkillsManager on completeExplore
+
+	connection Control on stopEventMonitor to SkillsManager on stopEventMonitor
+
+	connection SkillsManager on eventReply to Control on eventReply
+
+	connection SkillsManager on explorePriorityParameter to Control on explorePriorityParameter
+
+	connection Control on getExploreSafetyDistanceParameter to SkillsManager on getExploreSafetyDistanceParameter
+
+	connection SkillsManager on ExplorePriorityParam to Explore on ExplorePriorityParam
+
+	connection Control on getProximityGapValue to SkillsManager on getProximityGapValue
+
+	connection SkillsManager on activateMove to Move on activateMove
+
+connection Control on ProximitygapPlatform to Proximity on ProximitygapPlatform
+	connection Move on MovevInPlatform to Control on MovevInPlatform
+}
+

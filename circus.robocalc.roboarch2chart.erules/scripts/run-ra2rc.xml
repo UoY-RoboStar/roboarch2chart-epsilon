@@ -1,0 +1,102 @@
+<!-- 
+ ******************************************************************************
+ * Copyright (c) 2022 University of York and others
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0.
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ *
+ * Contributors:
+ *   William Barnett - initial definition
+ ****************************************************************************** -->
+
+<project default="RunDefault">
+	<property name="erules" value="platform:/resource/circus.robocalc.roboarch2chart.erules/erules"/>
+
+
+	<macrodef name="transform">
+		<attribute name="Project"/>
+		<attribute name="InputRAC"/>
+		<attribute name="RoboArchSystem"/>
+		<sequential>
+			<!-- NOTE: Epsilon's default BuildListener for ANT is not able to listen to
+					   events from subbuilds in ANT. Therefore, it could not clean up
+					   automatically upon reaching the end of a build, particularly in
+					   case an exception was thrown. I've implemented a custom build
+					   listener that does this. -->
+			<antcall target="Translate">
+				<!-- The URI of the Project as loaded in Eclipse. -->
+				<param name="Project" value="@{Project}" />
+				<!-- The name of the .rct file relative to InputProject. -->
+				<param name="InputRAC" value="@{InputRAC}"/>
+				<!-- The name of the RoboChart module to be transformed. -->
+				<param name="RoboArchSystem" value="@{RoboArchSystem}" />
+			</antcall>
+		</sequential>
+	</macrodef>
+
+
+
+
+
+
+	<target name="RunDefault">
+		<!-- To avoid avoid with repeated runs, we construct a uniquely identified output folder
+			 using ANT's built-in property build.numer. -->
+		<buildnumber/>
+		<transform inputrac="simple.rac" project="platform:/resource/new_test/" roboarchsystem="Simple"/>
+
+	</target>
+
+
+
+
+
+
+
+	<!-- This is the overall high-level task for translating a RoboArch system to
+		 a RoboChart package. -->
+	<target name="Translate">
+		<!-- The OutputFolder property is then set as follows. -->
+		<property name="OutputFolder" value="${Project}out/${build.number}/"/>
+		<property name="OutputPackage" value="pkg${build.number}"/>
+		<property name="OutputRCT" value="${OutputFolder}${InputRCT}"/>
+
+		<sequential>
+			<echo>Project: ${Project}</echo>
+			<echo>InputRAC: ${InputRAC}</echo>
+			<echo>RoboArchSystem: ${RoboArchSystem}</echo>
+			<echo>OutputFolder: ${OutputFolder}</echo>
+			<echo>OutputPackagePrefix: ${OutputPackage}</echo>
+			<echo>Build number: ${build.number}</echo>
+
+			<roboarch2sim.load name="RoboArch"
+				modeluri="${Project}${InputRAC}"
+				metamodeluri="http://www.robocalc.circus/RoboArch"
+				read="true" store="false" expand="true" failonerrors="true" cached="false" />
+
+			<roboarch2sim.createModel
+				name="RoboChart"
+				modeluri="${OutputFolder}${InputRCT}_rc.xmi"
+				caching="false"
+				metamodeluri="http://www.robocalc.circus/RoboChart"/>
+
+			<epsilon.etl uri="${erules}/RA2RC.etl" setbeans="true">
+				<parameter name="projecturi" value="${Project}"/>
+				<parameter name="buildnumber" value="${build.number}"/>
+				<parameter name="clonepackagename" value="${OutputPackage}"/>
+				<parameter name="robochartmodule" value="${RoboArchSystem}"/>
+				<parameter name="outputfolder" value="${OutputFolder}robochart/"/>
+				<model ref="RoboArch" as="Source"/>
+				<model ref="RoboChart"/>
+			</epsilon.etl>
+
+
+
+		</sequential>
+
+	</target>
+
+</project>

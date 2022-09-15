@@ -1,0 +1,21 @@
+package maildelivery::functions
+
+import maildelivery::types::*
+
+function CalculateResultingForce ( scan : Scan ) : Force { } 
+
+function CalculateOppositeForce ( f : Force ) : Force { } 
+
+function ForceToVelocities ( f : Force ) : Velocities { } 
+
+function GetClosestObjectDistanceFromScan ( s : Scan ) : Distance { } 
+
+function DistanceLessThanEqualTo ( a : Distance , b : Distance ) : boolean { } 
+
+function DistanceGreaterThan ( a : Distance , b : Distance ) : boolean { } 
+
+function DetectHallwayFromPointImage ( image : PointImage ) : boolean { } 
+
+function NavigateHallway ( image : PointImage ) : Velocities { } 
+
+function NavigateAroundObstacle ( environment : Scan ) : Velocities { }

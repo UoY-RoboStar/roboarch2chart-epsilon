@@ -1,0 +1,7 @@
+/target/
+/xtend-gen/
+/generated-robochart-text/
+/generated-robochart-models/
+TEST*.xml
+TEST*.txt
+/csp-gen/

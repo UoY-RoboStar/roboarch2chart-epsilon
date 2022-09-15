@@ -1,0 +1,17 @@
+
+
+<project>
+
+	<target name="run-robochartvalidationtests" description="Loads models using a separate Ant target">
+		
+		<!-- Run junit validation tests -->
+		<junit printsummary="yes" showoutput="true">
+			
+		  <test name="circus.robocalc.roboarch2chart.tests.ValidateGeneratedRoboChartText" outfile="TEST-validaterobocharttext">
+		  	<formatter type="plain"/>
+		  	</test>
+		</junit>	
+		
+	</target>
+
+</project>

@@ -1,0 +1,17 @@
+package maildelivery::ctl 
+
+import maildelivery::types::*
+import maildelivery::ctl::stm0::* 
+
+controller Ctl {
+uses PointCloud uses ColourPointCloud requires Base requires Audio event destination : Coordinate
+	event doorToFind : nat
+	event getLocation
+	event speak : string
+	event location : Coordinate
+	event destinationReached
+	event doorFound
+	event mailPickedUp
+	sref stm_ref0 = stm0
+}
+

@@ -1,0 +1,153 @@
+package maildelivery::ctl::movetolocation
+
+
+import maildelivery::types::*
+
+
+
+
+
+
+stm MoveToLocation {
+
+
+	uses IMoveToLocation
+
+
+
+
+	var targetParam : Coordinate , priorityParam : nat , current : Coordinate , hazards : Scan , velocity : Velocities , targetParamInitialised : boolean = false , priorityParamInitialised : boolean = false
+
+
+	initial Initial
+
+	 state Initialise {
+	}
+
+	 state Deactivated {
+	}
+
+	 state Startup {
+	}
+
+	 state Ready {
+	}
+
+	 state ComputeOutputs {
+	}
+
+	 state Cleanup {
+	}
+
+	transition InitialToInitialise {
+		from Initial
+		to Initialise
+	}
+
+	transition InitialiseToDeactivated {
+		from Initialise
+		to Deactivated
+		condition targetParamInitialised /\ priorityParamInitialised
+
+	}
+
+	transition DeactivatedToStartup {
+		from Deactivated
+		to Startup
+		trigger activateMoveToLocation
+	}
+
+	transition StartupToReady {
+		from Startup
+		to Ready
+	}
+
+	transition ReadyToComputeoutputs {
+		from Ready
+		to ComputeOutputs
+		trigger executeMoveToLocation
+	}
+
+	transition ComputeoutputsToReady {
+		from ComputeOutputs
+		to Ready
+	  	action completeMoveToLocation
+	}
+
+	transition ReadyToCleanup {
+		from Ready
+		to Cleanup
+		trigger deactivateMoveToLocation
+	}
+
+	transition CleanupToDeactivated {
+		from Cleanup
+		to Deactivated
+	}
+
+	transition ReadyReceiveCurrent {
+		from Ready
+		to Ready
+		trigger 
+	moveToLocationCurrent ? current
+	}
+
+	transition InitialiseReceiveTargetParam {
+		from Initialise
+		to Initialise
+		trigger 
+	  	moveToLocationTargetParam ? targetParam
+		action targetParamInitialised = true
+
+	}
+
+	transition DeactivatedReceiveTargetParam {
+		from Deactivated
+		to Deactivated
+		trigger 
+	moveToLocationTargetParam ? targetParam
+	}
+
+	transition ReadyReceiveHazards {
+		from Ready
+		to Ready
+		trigger 
+	moveToLocationHazards ? hazards
+	}
+
+
+
+
+	transition ReadyReceiveTargetParam {
+		from Ready
+		to Ready
+		trigger 
+	moveToLocationTargetParam ? targetParam
+	}
+
+	transition InitialiseReceivePriorityParam {
+		from Initialise
+		to Initialise
+		trigger 
+	  	moveToLocationPriorityParam ? priorityParam
+		action priorityParamInitialised = true
+
+	}
+	
+	transition ReadyReceivePriorityParam {
+		from Ready
+		to Ready
+		trigger 
+
+	moveToLocationPriorityParam ? priorityParam
+	}
+	
+	transition DeactivatedReceivePriorityParam {
+		from Deactivated
+		to Deactivated
+		trigger 
+
+	moveToLocationPriorityParam ? priorityParam
+	}
+
+}

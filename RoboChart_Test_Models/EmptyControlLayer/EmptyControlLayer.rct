@@ -1,0 +1,4 @@
+package empty_control_layer import empty_control_layer::control::* module EmptyControlLayer {
+	cref Control = Control
+}
+

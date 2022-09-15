@@ -1,0 +1,43 @@
+system ReactiveSkillsObstacleAvoidanceMonitor 
+
+type Velocity
+type Length
+datatype Velocities {linear:Velocity angular:Velocity} 
+function LengthCompareLessThan ( a: Length , b : Length ) : boolean { }
+
+
+layer  Control: ControlLayer { 
+		pattern = ReactiveSkills ;
+		
+		      
+		skills=  
+		
+			dskill Move { 
+				    inputs= vIn:Velocities;
+			},
+			
+			dskill  Proximity { 
+				    outputs= gap:Length;
+			},
+						
+			cskill Explore {
+					parameters =	maxSpeed: Velocity,
+					            safetyDistance: Length;	
+					
+					inputs = obstacleDistance: Length;
+					
+				    outputs = vOut: Velocities;
+			};
+			
+		
+			
+		connections=  
+			Explore on vOut to Move on vIn, 
+			Proximity on gap to Explore on obstacleDistance ;
+		
+		monitors= ( SafetyDistanceReached |  LengthCompareLessThan(  Proximity¦¦gap , Proximity¦¦gap)   ) ; 
+		
+		
+		
+};
+

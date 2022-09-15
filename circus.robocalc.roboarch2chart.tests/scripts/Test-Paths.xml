@@ -1,0 +1,34 @@
+
+
+<project name="paths">
+	<property name="uri.file.prefix" value="file:/" />
+	<property name="uri.eclipse.prefix" value="platform:/resource" />
+	<path id="gitrepoBasePath" location="../../../.." />
+	<pathconvert property="gitrepoBase" refid="gitrepoBasePath"/>
+	
+	<path id="roboarch2chartBasePath" location="../.." />
+	<pathconvert property="roboarch2chartBase" refid="roboarch2chartBasePath"/>
+	
+	<property name="erules.base.location" value="${roboarch2chartBase}/circus.robocalc.roboarch2chart.erules" />
+	<property name="tests.base.location" value="${roboarch2chartBase}/circus.robocalc.roboarch2chart.tests" />
+	<property name="rc2text.base.location" value="${gitrepoBase}/robochart/robochart2text-epsilon/circus.robocalc.robochart2text.gen" />
+
+	<property name="ra.text.location" value="${uri.file.prefix}/${roboarch2chartBase}/RoboArch_Test_Text" />
+	<property name="rc.text.location" value="${uri.file.prefix}/${roboarch2chartBase}/RoboChart_Test_Models" />
+	
+	<property name="transformed.model.directory" value="generated-robochart-models" />
+	<property name="generated.text.directory" value="generated-robochart-text" />
+	<property name="transformed.model.location" location="${tests.base.location}/${transformed.model.directory}" />
+	<property name="generated.text.location" location="${tests.base.location}/${generated.text.directory}" />
+	
+	<property name="tests.location" location="${tests.base.location}/eunit"/>
+
+	<property name="rc.metamodel.uri" value="http://www.robocalc.circus/RoboChart" />
+	<property name="ra.metamodel.uri" value="http://www.robocalc.circus/RoboArch" />
+	
+
+	<tstamp>
+	    <format property="start-timestamp" pattern="dMMMyyyy-Hms" />
+	</tstamp>
+	
+</project>

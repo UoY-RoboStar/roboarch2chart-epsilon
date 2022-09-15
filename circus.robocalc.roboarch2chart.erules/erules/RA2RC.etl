@@ -1,0 +1,378 @@
+/********************************************************************************
+ * Copyright (c) 2022 University of York and others
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0.
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ *
+ * Contributors:
+ *   William Barnett - initial definition
+ ********************************************************************************/
+
+import "./common/Common.eol";
+import "./common/RoboChart.eol";
+import "./common/RA2RC-TopLevel.eol";
+
+import "RA2RC-Expressions.etl";
+import "./patterns/RA2RC-ReactiveSkills.etl";
+
+
+pre {
+
+   // Controls whether debug information is printed.
+	var debug = true;
+	var debugPrintRuleNames = true;
+	var level = 0;
+	var previouslevel = 0;
+	
+	var inputSystem = RoboArch!System.allInstances();
+	
+	printDebug("RoboArch to RoboChart");
+	printDebug("The input model has " + inputSystem.first().layers.size().asString() + " layers.");
+	
+}
+
+post {
+	printDebug("Complete.");
+}
+
+
+rule SystemToRCModule
+	transform amsys: RoboArch!System
+	to rcsysPkg: RoboChart!RCPackage,
+		rcdefsPkg: RoboChart!RCPackage{
+		
+		rcdefsPkg.name = DefinitionsName();
+		
+		//Where
+		var cLayer = amsys.layers.select( lyr | lyr.isTypeOf(RoboArch!ControlLayer) );
+
+		if ( amsys.robot.size() < 1 ) {
+			if ( (amsys.robot.operations.size() > 0) or (amsys.robot.interfaces.size() > 0) or 
+			     (amsys.robot.pinterfaces.size() > 0) or (amsys.robot.variableList.size() > 0) ) {
+				var roboticPlatform = amsys.robot.equivalent();
+				
+			} else {
+				var roboticPlatform = roboticPlatform.add(ControlLayerToRoboticPlatform(cLayer));
+			}
+		}		 
+
+		
+		//Definitions
+		var rcdefs = amsys.definitions.equivalent();
+						for (lyr: RoboArch!Layer in amsys.layers){
+							rcdefs.addAll( LayerToTypes(lyr) );
+						}
+						
+		//Functions
+		var rcfuns = amsys.functions.equivalent();
+						for (lyr: RoboArch!Layer in amsys.layers){
+							rcfuns.addAll( LayerToFunctions(lyr) );
+						}
+					
+		//Interfaces	
+		var rcifs = amsys.interfaces.equivalent();
+						for (lyr: RoboArch!Layer in amsys.layers){
+							rcifs.addAll( LayerToInterface(lyr) );
+						}
+		
+		//Module
+		var rcmod = new RoboChart!RCModule;
+		
+			rcmod.name = amsys.name;
+			
+			//Module nodes = the union of controllers and the roboticplatform
+			rcmod.nodes = LayersToControllers( amsys.layers );
+							rcmod.nodes.addAll(roboticPlatform);
+
+			printDebugControllerSummary(rcmod.nodes);
+			
+			rcmod.connections = amsys.connections.equivalent();
+		
+	
+		//Populate types package
+		rcdefs.remove(null);
+		rcifs.remove(null);
+		rcfuns.remove(null);
+		
+		rcdefsPkg.types = rcdefs;
+		rcdefsPkg.interfaces = rcifs;
+		rcdefsPkg.functions = rcfuns;
+		
+		//Populate system package
+		rcsysPkg.name = amsys.name;		
+		rcsysPkg.imports.add( getPackageImport(DefinitionsName()) );
+		
+		if( amsys.layers.exists( lyr | lyr.isTypeOf(RoboArch!ControlLayer) and lyr.pattern.isDefined() ) ){
+			rcsysPkg.imports.add( getPackageImport(PlatformName()) );
+		}
+		for(lyr: RoboArch!Layer in amsys.layers){
+			rcsysPkg.imports.add( getPackageImport(lyr.name.toLowerCase().firstToUpperCase() ) );
+		}
+		
+		rcsysPkg.modules.add(rcmod);
+		
+	}
+
+
+
+/*************************
+ *  Empty Layers
+ **************************/
+  
+ 
+@abstract
+rule EmptyLayerToController 
+	transform amlyr: RoboArch!Layer
+	to rchtnc: RoboChart!ControllerRef {
+	
+		guard : amlyr.pattern == null
+		
+		printDebug("Start");
+
+		//TODO generate htn planning robochart model
+		var controller = new RoboChart!ControllerDef;
+		controller.name = amlyr.name.toLowerCase().firstToUpperCase();
+		
+		var package = new RoboChart!RCPackage;
+		package.name = amlyr.name.toLowerCase().firstToUpperCase();
+		package.controllers.add(controller);
+		
+		rchtnc.populateControllerRef(controller);
+	}
+	
+@lazy
+rule EmptyControlLayerToController
+	transform amlyr: RoboArch!ControlLayer
+	to rcclyr: RoboChart!ControllerRef
+	extends EmptyLayerToController{
+	}
+
+@lazy
+rule EmptyExecutiveLayerToController
+	transform amlyr: RoboArch!ExecutiveLayer
+	to rcclyr: RoboChart!ControllerRef
+	extends EmptyLayerToController{
+	}
+
+@lazy
+rule EmptyPlanningLayerToController
+	transform amlyr: RoboArch!PlanningLayer
+	to rcclyr: RoboChart!ControllerRef
+	extends EmptyLayerToController{
+	}
+
+
+ 
+/* 
+ @lazy
+rule ControlLayerToController
+	transform amcl: RoboArch!ControlLayer
+	to rclyr: RoboChart!ControllerRef{
+	
+	guard : RoboArch!ControlLayer.all().size() == 1
+		
+		printDebug("Start");
+		var patternPackage;
+		
+		if (amcl.pattern == null){
+			patternPackage = CreatePackageWithController("Control");
+		}
+		else {
+			increaseDebug();
+			patternPackage = amcl.pattern.equivalent(); 
+			decreaseDebug();
+		}
+		
+		patternPackage.controllers.select( ctl | ctl.isTypeOf(ControlLayer) );
+		
+		PopulateControllerRef(patternPackage.controllers.first(), rclyr);
+	}
+
+@lazy
+rule ControlLayerToRoboticPlatform
+	transform amcl: RoboArch!ControlLayer
+	to rcpr: RoboChart!RoboticPlatformRef{
+	
+	guard : RoboArch!ControlLayer.all().size() == 1
+	
+		printDebug("Start");
+		//todo define
+	}
+	
+
+@lazy
+rule ExecutiveLayerToController
+	transform amel: RoboArch!ExecutiveLayer
+	to rcel: RoboChart!ControllerRef{
+	
+		guard : RoboArch!ExecutiveLayer.all().size() == 1
+
+		printDebug("Start");
+		var patternPackage;
+		
+		if (amel.pattern == null){
+			patternPackage = CreatePackageWithController("Executive");
+			
+		} else {
+			increaseDebug();
+			patternPackage = amel.pattern.equivalent();
+			decreaseDebug();
+		}
+	
+		PopulateControllerRef(patternPackage.controllers.first(), rcel);
+	}
+
+@lazy
+rule PlanningLayerToController
+	transform ampl: RoboArch!PlanningLayer
+	to rcpl: RoboChart!ControllerRef{
+	
+		guard : RoboArch!PlanningLayer.all().size() == 1
+	
+		printDebug("Start");
+		var patternPackage;
+		
+		if (ampl.pattern == null){
+			patternPackage = CreatePackageWithController("Planning");
+			
+		} else {
+			increaseDebug();
+			patternPackage = ampl.pattern.equivalent();
+			decreaseDebug();
+		}
+		
+		PopulateControllerRef(patternPackage.controllers.first(), rcpl);
+	}
+	*/
+
+/*************************
+ *  Types
+ **************************/
+ 
+ @abstract
+ rule NamedElementToNamedElement
+ 	transform rpne: RoboArch!NamedElement
+ 	to rcne: RoboChart!NamedElement {
+ 		
+ 		rcne.name = rpne.name;
+ 	}
+ 	
+  @abstract
+ rule TypedNamedElementToTypedNamedElement
+ 	transform ratn: RoboArch!NamedElement
+ 	to rctn: RoboChart!NamedElement
+	extends NamedElementToNamedElement{
+ 		
+ 		rctn.type = ratn.type.equivalent().clone();
+ 	}
+	
+@lazy
+rule PrimitiveTypeToPrimitiveType
+	transform rppt: RoboArch!PrimitiveType
+	to rcpt: RoboChart!PrimitiveType 
+	extends NamedElementToNamedElement{
+	
+		printDebug("Start" + rppt.name);
+		//Handled by the abstract rule
+	}
+
+@lazy
+rule RecordTypeToRecordType
+	transform rprt: RoboArch!RecordType
+	to rcrt: RoboChart!RecordType
+	extends NamedElementToNamedElement{
+	
+		printDebug("Start");
+		
+		increaseDebug();
+		rcrt.fields = rprt.fields.equivalent();
+		decreaseDebug();
+	}
+	
+@lazy
+rule FieldToField
+	transform rpfd: RoboArch!Field
+	to rcfd: RoboChart!Field
+	extends NamedElementToNamedElement{
+	
+		printDebug("Start " + rpfd.name);
+
+		increaseDebug();
+		rcfd.type = rpfd.type.equivalent();
+		decreaseDebug();
+	}
+
+@lazy
+rule EnumerationToEnumeration
+	transform rpenm: RoboArch!Enumeration
+	to rcenm: RoboChart!Enumeration
+	extends NamedElementToNamedElement{
+	
+		printDebug("Start");
+		
+		increaseDebug();
+		rcenm.literals = rpenm.literals.equivalent();
+		decreaseDebug();
+	}
+	
+@lazy
+rule LiteralToLiteral
+	transform rplt: RoboArch!Literal
+	to rclt: RoboChart!Literal
+	extends NamedElementToNamedElement{
+	
+		printDebug("Start");
+		
+		increaseDebug();
+		rclt.types = rplt.types.equivalent();
+		decreaseDebug();
+	}
+
+@lazy
+rule FunctionToFunction
+	transform rafn: RoboArch!Function
+	to rcfn: RoboChart!Function
+	extends TypedNamedElementToTypedNamedElement{
+	
+		rcfn.parameters = rafn.parameters.equivalent();
+	}
+	
+@lazy
+rule ParameterToParameter
+	transform rafn: RoboArch!Parameter
+	to rcfn: RoboChart!Parameter
+	extends TypedNamedElementToTypedNamedElement{
+	
+		// Handled by the abstract rule
+	}
+
+//@lazy
+rule EventToEvent
+	transform rpev: RoboArch!Event
+	to rcev: RoboChart!Event 
+	extends NamedElementToNamedElement{
+	
+ 		printDebug("Start " + rpev.name);
+		rcev.broadcast = rpev.broadcast;
+		
+		increaseDebug();
+		rcev.type = rpev.type.equivalent();
+		decreaseDebug();
+	}
+	
+@lazy
+rule TypeRefToTypeRef
+	transform rptr: RoboArch!TypeRef
+	to rctr: RoboChart!TypeRef{
+		/* When called via equivalent only the same reference is returned each time
+		   therefore ensure the TypeRef returned by equivalent is cloned. */
+		
+		printDebug("Startv - " + rptr.ref.name + ":" + rptr.ref.type.name);
+		
+		increaseDebug();
+		rctr.ref = rptr.ref.equivalent(); 
+		decreaseDebug();
+	}

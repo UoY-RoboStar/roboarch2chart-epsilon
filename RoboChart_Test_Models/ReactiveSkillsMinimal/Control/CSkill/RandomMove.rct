@@ -1,0 +1,110 @@
+package Control::CSkill::RandomMove
+
+import Types::* 
+
+
+
+
+
+stm RandomMove { 
+	
+	
+	uses IRandomMove
+	
+	
+	
+	
+	var PriorityParam : nat , vOut : Velocities , PriorityParamInitialised : boolean = 	false  
+	 
+
+	initial Initial
+
+	 state Initialise { 
+	}
+
+	 state Deactivated { 
+	}
+
+	 state Startup { 
+	}
+
+	 state Ready { 
+	}
+
+	 state ComputeOutputs { 
+	}
+
+	 state Cleanup { 
+	}
+
+	transition InitialToInitialise {
+		from Initial
+		to Initialise
+	}
+
+	transition InitialiseToDeactivated {
+		from Initialise
+		to Deactivated
+		condition 	PriorityParamInitialised  
+	
+	}
+
+	transition DeactivatedToStartup {
+		from Deactivated
+		to Startup
+		trigger activateRandomMove 
+	}
+
+	transition StartupToReady {
+		from Startup
+		to Ready
+	}
+
+	transition ReadyToComputeoutputs {
+		from Ready
+		to ComputeOutputs
+		trigger executeRandomMove 
+	}
+
+	transition ComputeoutputsToReady {
+		from ComputeOutputs
+		to Ready
+	  	action completeRandomMove 
+	}
+
+	transition ReadyToCleanup {
+		from Ready
+		to Cleanup
+		trigger deactivateRandomMove 
+	}
+
+	transition CleanupToDeactivated {
+		from Cleanup
+		to Deactivated
+	}
+
+	transition InitialiseReceivePriorityParam {
+		from Initialise
+		to Initialise
+		trigger RandomMovePriorityParam ? PriorityParam 
+	  	action PriorityParamInitialised = 	true  
+	
+	}
+
+	transition DeactivatedReceivePriorityParam {
+		from Deactivated
+		to Deactivated
+		trigger RandomMovePriorityParam ? PriorityParam 
+	}
+
+	transition ReadyReceivePriorityParam {
+		from Ready
+		to Ready
+		trigger RandomMovePriorityParam ? PriorityParam 
+	}
+
+	 
+} 
+
+
+

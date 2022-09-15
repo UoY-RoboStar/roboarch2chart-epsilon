@@ -1,0 +1,21 @@
+package ReactiveSkillsMinimal
+
+import Types::* 
+import Platform::* 
+import Control::* 
+
+
+
+ module ReactiveSkillsMinimal {
+	
+	 cref Control = Control
+
+	 rref Platform = Platform
+
+	
+	
+		 
+}
+
+
+

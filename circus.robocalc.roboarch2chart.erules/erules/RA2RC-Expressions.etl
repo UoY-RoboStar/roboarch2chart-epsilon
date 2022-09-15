@@ -1,0 +1,341 @@
+/********************************************************************************
+ * Copyright (c) 2022 University of York and others
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0.
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ *
+ * Contributors:
+ *   William Barnett - initial definition
+ ********************************************************************************/
+
+import "./common/Common.eol";
+import "./common/RoboChart.eol";
+
+
+
+
+@lazy
+rule BooleanExpToBooleanExp
+	transform rabe: RoboArch!BooleanExp
+	to rcbe: RoboChart!BooleanExp {
+
+		rcbe.value = rabe.value;
+
+	}
+
+@lazy
+rule FloatExpToFloatExp
+	transform rafe: RoboArch!FloatExp
+	to rcfe: RoboChart!FloatExp {
+
+		rcfe.value = rafe.value;
+
+	}
+
+@lazy
+rule IntegerExpToIntegerExp
+	transform raie: RoboArch!IntegerExp
+	to rcie: RoboChart!IntegerExp {
+
+		rcie.value = raie.value;
+
+	}
+
+@lazy
+rule NegToNeg
+	transform rane: RoboArch!Neg
+	to rcne: RoboChart!Neg {
+
+		rcne.exp = rane.exp.equivalent();
+
+	}
+
+@lazy
+rule NotToNot
+	transform rane: RoboArch!Not
+	to rcne: RoboChart!Not {
+
+		rcne.exp = rane.exp.equivalent();
+
+	}
+
+@lazy
+rule ParExpToParExp
+	transform rape: RoboArch!ParExp
+	to rcpe: RoboChart!ParExp {
+
+		rcpe.exp = rape.exp.equivalent();
+
+	}
+
+
+@lazy
+rule StringExpToStringExp
+	transform rase: RoboArch!StringExp
+	to rcse: RoboChart!StringExp {
+
+		rcse.value = rase.value;
+
+	}
+
+
+
+@lazy
+rule RefExpToRefExp
+	transform rare: RoboArch!RefExp
+	to rcre: RoboChart!RefExp {
+
+		guard: not( rare.ref.isTypeOf(RoboArch!Variable) )
+
+		printDebug("Start");
+
+		rcre.ref = rare.ref.equivalent();
+
+	}
+
+@lazy
+rule VariableRefExpToRefExp
+	transform rare: RoboArch!RefExp
+	to rcre: RoboChart!RefExp {
+
+		guard {
+			var variable = rare.ref;
+			var skill = variable.eContainer();
+
+			return (rare.ref.isTypeOf(RoboArch!Variable) and skill.parameters.includes(variable))  ;
+		}
+
+		printDebug("Start");
+
+		var variable = rare.ref;
+		var skill = variable.eContainer();
+
+		// Use paramter name format for variable reference
+		rcre.ref = ref( SkillsManagerVarParameterName(skill.name, variable.name), RoboChart!Variable ).name;
+
+	}
+
+@lazy
+rule VariableRefExpToRefExpArray
+	transform rare: RoboArch!RefExp
+	to rcae: RoboChart!ArrayExp {
+
+		guard {
+			var variable = rare.ref;
+			var skill = variable.eContainer();
+
+			return (rare.ref.isTypeOf(RoboArch!Variable) and skill.parameters.excludes(variable)) ;
+		}
+
+		printDebug("Start");
+
+		var variable = rare.ref;
+		var skill = variable.eContainer();
+
+		// Otherwise it's an input or an output so use io name format for variable reference
+		var arrayAccess = new RoboChart!ArrayExp;
+
+		rcae.value = CreateRCRefExp( ref( SkillsManagerInputOutputVariableName(skill.name, variable.name), RoboChart!Variable ).name );
+		rcae.parameters.add( CreateRCIntegerExp(1) );
+
+	}
+
+@lazy
+rule VarExpToVarExp
+	transform rave: RoboArch!VarExp
+	to rcve: RoboChart!VarExp {
+
+		rcve.value = rave.value.equivalent();
+
+	}
+
+
+
+@lazy
+@abstract
+rule BinaryExpressionToBinaryExpression
+	transform rabe: RoboArch!BinaryExpression
+	to rcbe: RoboChart!BinaryExpression {
+
+		rcbe.left = rabe.left.equivalent();
+		rcbe.right = rabe.right.equivalent();
+
+	}
+
+@lazy
+rule AndToAnd
+	transform rabe: RoboArch!And
+	to rcbe: RoboChart!And
+	extends BinaryExpressionToBinaryExpression {
+
+		// Handled by the abstract rule
+
+	}
+
+@lazy
+rule CatToCat
+	transform rabe: RoboArch!Cat
+	to rcbe: RoboChart!Cat
+	extends BinaryExpressionToBinaryExpression {
+
+		// Handled by the abstract rule
+
+	}
+
+@lazy
+rule DifferentToDifferent
+	transform rabe: RoboArch!Different
+	to rcbe: RoboChart!Different
+	extends BinaryExpressionToBinaryExpression {
+
+		// Handled by the abstract rule
+
+	}
+
+@lazy
+rule DivToDiv
+	transform rabe: RoboArch!Div
+	to rcbe: RoboChart!Div
+	extends BinaryExpressionToBinaryExpression {
+
+		// Handled by the abstract rule
+
+	}
+
+@lazy
+rule EqualsToEquals
+	transform rabe: RoboArch!Equals
+	to rcbe: RoboChart!Equals
+	extends BinaryExpressionToBinaryExpression {
+
+		// Handled by the abstract rule
+
+	}
+
+@lazy
+rule GreaterOrEqualToGreaterOrEqual
+	transform rabe: RoboArch!GreaterOrEqual
+	to rcbe: RoboChart!GreaterOrEqual
+	extends BinaryExpressionToBinaryExpression {
+
+		// Handled by the abstract rule
+
+	}
+
+@lazy
+rule GreaterThanToGreaterThan
+	transform rabe: RoboArch!GreaterThan
+	to rcbe: RoboChart!GreaterThan
+	extends BinaryExpressionToBinaryExpression {
+
+		// Handled by the abstract rule
+
+	}
+
+@lazy
+rule IffToIff
+	transform rabe: RoboArch!Iff
+	to rcbe: RoboChart!Iff
+	extends BinaryExpressionToBinaryExpression {
+
+		// Handled by the abstract rule
+
+	}
+
+@lazy
+rule ImpliesToImplies
+	transform rabe: RoboArch!Implies
+	to rcbe: RoboChart!Implies
+	extends BinaryExpressionToBinaryExpression {
+
+		// Handled by the abstract rule
+
+	}
+
+@lazy
+rule LessOrEqualToLessOrEqual
+	transform rabe: RoboArch!LessOrEqual
+	to rcbe: RoboChart!LessOrEqual
+	extends BinaryExpressionToBinaryExpression {
+
+		// Handled by the abstract rule
+
+	}
+
+@lazy
+rule LessThanToLessThan
+	transform rabe: RoboArch!LessThan
+	to rcbe: RoboChart!LessThan
+	extends BinaryExpressionToBinaryExpression {
+
+		// Handled by the abstract rule
+
+	}
+
+@lazy
+rule MinusToMinus
+	transform rabe: RoboArch!Minus
+	to rcbe: RoboChart!Minus
+	extends BinaryExpressionToBinaryExpression {
+
+		// Handled by the abstract rule
+
+	}
+
+@lazy
+rule ModulusToModulus
+	transform rabe: RoboArch!Modulus
+	to rcbe: RoboChart!Modulus
+	extends BinaryExpressionToBinaryExpression {
+
+		// Handled by the abstract rule
+
+	}
+
+@lazy
+rule MultToMult
+	transform rabe: RoboArch!Mult
+	to rcbe: RoboChart!Mult
+	extends BinaryExpressionToBinaryExpression {
+
+		// Handled by the abstract rule
+
+	}
+
+@lazy
+rule OrToOr
+	transform rabe: RoboArch!Or
+	to rcbe: RoboChart!Or
+	extends BinaryExpressionToBinaryExpression {
+
+		// Handled by the abstract rule
+
+	}
+
+@lazy
+rule PlusToPlus
+	transform rabe: RoboArch!Plus
+	to rcbe: RoboChart!Plus
+	extends BinaryExpressionToBinaryExpression {
+
+		// Handled by the abstract rule
+
+	}
+
+
+@lazy
+rule CallExpToCallExp
+	transform race: RoboArch!CallExp
+	to rcce: RoboChart!CallExp {
+
+		printDebug("Start");
+
+		rcce.`function` = race.`function`.equivalent();
+		rcce.args.addAll( race.args.equivalents().flatten() );
+
+		printDebug("args: " + rcce.args.asString() );
+
+	}

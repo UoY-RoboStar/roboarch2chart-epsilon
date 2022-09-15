@@ -1,0 +1,139 @@
+package maildelivery::ctl::colourvision
+
+import maildelivery::types::*
+
+
+stm ColourVision {
+
+
+	uses IColourVision
+	event platformEnvColourPoints: PointImage
+
+
+	var priorityParam : nat , envColourPoints : PointImage , priorityParamInitialised : boolean = 	false
+	 , envColourPointsSenseReceived : boolean = 	false
+
+
+	initial Initial
+
+	 state Initialise {
+	}
+
+	 state Deactivated {
+	}
+
+	 state Startup {
+	}
+
+	 state Ready {
+	}
+
+	 state HandleActuationCommands {
+	}
+
+	 state HandleSensorData {
+	}
+
+	 state Cleanup {
+	}
+
+	transition InitialToInitialise {
+		from Initial
+		to Initialise
+	}
+
+	transition InitialiseToDeactivated {
+		from Initialise
+		to Deactivated
+		condition 	priorityParamInitialised
+
+	}
+
+	transition DeactivatedToStartup {
+		from Deactivated
+		to Startup
+		trigger activateColourVision
+	}
+
+	transition StartupToReady {
+		from Startup
+		to Ready
+	}
+
+	transition ReadyToHandleActuationCommands {
+		from Ready
+		to HandleActuationCommands
+		trigger executeColourVision
+	}
+
+	transition HandleActuationCommandsToHandleSensorData {
+		from HandleActuationCommands
+		to HandleSensorData
+	condition envColourPointsSenseReceived
+	}
+
+	transition HandleSensorDataToReady {
+		from HandleSensorData
+		to Ready
+		condition 	not envColourPointsSenseReceived
+
+	  	action completeColourVision
+	}
+
+	transition ReadyToCleanup {
+		from Ready
+		to Cleanup
+		trigger deactivateColourVision
+	}
+
+	transition CleanupToDeactivated {
+		from Cleanup
+		to Deactivated
+	}
+
+	transition ReadyReceiveEnvColourPoints {
+		from Ready
+		to Ready
+		trigger platformEnvColourPoints ? envColourPoints
+	  	action envColourPointsSenseReceived = 	true
+
+	}
+
+	transition HandleSensorDataReceivegap {
+		from HandleSensorData
+		to HandleSensorData
+		condition 	envColourPointsSenseReceived
+
+	  	action colourVisionEnvColourPoints ! 	(| envColourPoints, priorityParam |)
+	 ; envColourPointsSenseReceived = 	false
+
+	}
+
+	transition InitialiseReceivePriorityParam {
+		from Initialise
+		to Initialise
+		trigger colourVisionPriorityParam ? priorityParam
+	  	action priorityParamInitialised = 	true
+
+	}
+
+	transition DeactivatedReceivePriorityParam {
+		from Deactivated
+		to Deactivated
+		trigger colourVisionPriorityParam ? priorityParam
+	}
+
+	transition ReadyReceivePriorityParam {
+		from Ready
+		to Ready
+		trigger colourVisionPriorityParam ? priorityParam
+	}
+
+
+transition t0 {
+		from HandleActuationCommands
+		to Ready
+		condition not envColourPointsSenseReceived
+		action completeColourVision
+	}
+}

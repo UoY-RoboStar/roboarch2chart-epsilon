@@ -1,0 +1,15 @@
+package maildelivery::pln 
+
+import maildelivery::types::* import maildelivery::pln::stm0::* 
+
+
+controller Pln {
+	
+event deliveryComplete
+	event pickupFailed
+
+	event deliverMail : Office
+
+	sref stm_ref0 = stm0
+}
+

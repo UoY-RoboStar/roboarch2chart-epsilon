@@ -1,0 +1,7 @@
+system ThreeEmptyLayers
+
+layer Planning: PlanningLayer {  } ;
+
+layer Executive: ExecutiveLayer {  } ;
+
+layer Control: ControlLayer {  } ;	 

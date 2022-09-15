@@ -1,0 +1,101 @@
+package Types
+
+
+
+type Velocity
+
+
+	 
+	 
+
+
+
+record Velocities {
+	linear : Velocity 
+	angular : Velocity 
+}
+
+	 
+	 
+
+
+
+
+enumeration Skills {
+	MOVE
+	RANDOMMOVE
+ }
+	 
+	 
+
+
+
+
+enumeration Events {
+ }
+	 
+	 
+
+
+interface IMovePlatformActuation {
+
+	 event MovevInPlatform : Velocities
+
+
+}
+
+interface IRandomMove {
+
+	 event activateRandomMove
+	 event deactivateRandomMove
+	 event executeRandomMove
+	 event completeRandomMove
+	 event RandomMovePriorityParam : nat
+	 event RandomMovevOut : Velocities * nat
+
+
+}
+
+interface IControl {
+
+	 event initiateEventMonitor : Events
+	 event stopEventMonitor : Events
+	 event getRandomMovePriorityParameter
+	 event setMovePriorityParameter : nat
+	 event getMovePriorityParameter
+	 event getActiveSkills
+	 event activate : Skills
+	 event setRandomMovePriorityParameter : nat
+	 event deactivate : Skills
+	 event getRandomMoveVOutValue
+	 event movePriorityParameter : nat
+	 event RandomMovevOutValue : Velocities
+	 event activeSkills : Set( Skills ) 
+	 event randomMovePriorityParameter : nat
+	 event eventReply : Events
+
+
+}
+
+interface IMove {
+
+	 event activateMove
+	 event deactivateMove
+	 event executeMove
+	 event completeMove
+	 event MovePriorityParam : nat
+	 event MovevIn : Velocities
+
+
+}
+
+interface IMovePlatformSensing {
+
+
+
+}
+
+
+function UpdateValue ( value : ?X * nat , newValue : ?X * nat  ) : boolean { } 
+
+

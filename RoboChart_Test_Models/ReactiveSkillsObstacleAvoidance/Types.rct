@@ -1,0 +1,144 @@
+package Types
+
+
+
+type Velocity
+
+
+	 
+	 
+
+
+type Length
+
+
+	 
+	 
+
+
+
+record Velocities {
+	linear : Velocity 
+	angular : Velocity 
+}
+
+	 
+	 
+
+
+
+
+enumeration Events {
+ }
+	 
+	 
+
+
+
+
+enumeration Skills {
+	MOVE
+	PROXIMITY
+	EXPLORE
+ }
+	 
+	 
+
+
+interface IProximity {
+
+	 event activateProximity
+	 event deactivateProximity
+	 event executeProximity
+	 event completeProximity
+	 event ProximityPriorityParam : nat
+	 event Proximitygap : Length * nat
+
+
+}
+
+interface IControl {
+
+	 event getProximityPriorityParameter
+	 event getExploreVOutValue
+	 event deactivate : Skills
+	 event setMovePriorityParameter : nat
+	 event getExploreMaxSpeedParameter
+	 event initiateEventMonitor : Events
+	 event getExplorePriorityParameter
+	 event getMovePriorityParameter
+	 event setProximityPriorityParameter : nat
+	 event setExplorePriorityParameter : nat
+	 event setExploreMaxSpeedParameter : Velocity
+	 event stopEventMonitor : Events
+	 event getProximityGapValue
+	 event getActiveSkills
+	 event activate : Skills
+	 event ExplorePriorityParameter : nat
+	 event eventReply : Events
+	 event ProximityPriorityParameter : nat
+	 event ExploreMaxSpeedParameter : Velocity
+	 event MovePriorityParameter : nat
+	 event ProximitygapValue : Length
+	 event ExplorevOutValue : Velocities
+	 event activeSkills : Seq( Skills ) 
+
+
+}
+
+interface IMove {
+
+	 event activateMove
+	 event deactivateMove
+	 event executeMove
+	 event completeMove
+	 event MovePriorityParam : nat
+	 event MovevIn : Velocities
+
+
+}
+
+interface IMovePlatformActuation {
+
+	 event MovevInPlatform : Velocities
+
+
+}
+
+interface IExplore {
+
+	 event activateExplore
+	 event deactivateExplore
+	 event executeExplore
+	 event completeExplore
+	 event ExploremaxSpeedParam : Velocity
+	 event ExplorePriorityParam : nat
+	 event ExploreobstacleDistance : Length
+	 event ExplorevOut : Velocities * nat
+
+
+}
+
+interface IProximityPlatformSensing {
+
+
+
+}
+
+interface IProximityPlatformActuation {
+
+	 event ProximitygapPlatform : Length
+
+
+}
+
+interface IMovePlatformSensing {
+
+
+
+}
+
+
+function UpdateValue ( value : ?X * nat , newValue : ?X * nat  ) : boolean { } 
+
+

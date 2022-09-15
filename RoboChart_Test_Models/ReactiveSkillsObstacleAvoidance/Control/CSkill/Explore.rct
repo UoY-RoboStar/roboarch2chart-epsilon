@@ -1,0 +1,137 @@
+package Control::CSkill::Explore
+
+import Types::* 
+
+
+
+
+
+stm Explore { 
+	
+	
+	uses IExplore
+	
+	
+	
+	
+	var maxSpeedParam : Velocity , PriorityParam : nat , obstacleDistance : Length , vOut : Velocities , PriorityParamInitialised : boolean = 	false  
+	 , maxSpeedParamInitialised : boolean = 	false  
+	 
+
+	initial Initial
+
+	 state Initialise { 
+	}
+
+	 state Deactivated { 
+	}
+
+	 state Startup { 
+	}
+
+	 state Ready { 
+	}
+
+	 state ComputeOutputs { 
+	}
+
+	 state Cleanup { 
+	}
+
+	transition InitialToInitialise {
+		from Initial
+		to Initialise
+	}
+
+	transition InitialiseToDeactivated {
+		from Initialise
+		to Deactivated
+		condition 	PriorityParamInitialised /\ maxSpeedParamInitialised  
+	
+	}
+
+	transition DeactivatedToStartup {
+		from Deactivated
+		to Startup
+		trigger activateExplore 
+	}
+
+	transition StartupToReady {
+		from Startup
+		to Ready
+	}
+
+	transition ReadyToComputeoutputs {
+		from Ready
+		to ComputeOutputs
+		trigger executeExplore 
+	}
+
+	transition ComputeoutputsToReady {
+		from ComputeOutputs
+		to Ready
+	  	action completeExplore 
+	}
+
+	transition ReadyToCleanup {
+		from Ready
+		to Cleanup
+		trigger deactivateExplore 
+	}
+
+	transition CleanupToDeactivated {
+		from Cleanup
+		to Deactivated
+	}
+
+	transition ReadyReceiveobstacleDistance {
+		from Ready
+		to Ready
+		trigger ExploreobstacleDistance ? obstacleDistance 
+	}
+
+	transition InitialiseReceivemaxSpeedParam {
+		from Initialise
+		to Initialise
+		trigger ExploremaxSpeedParam ? maxSpeedParam 
+	  	action maxSpeedParamInitialised = 	true  
+	
+	}
+
+	transition DeactivatedReceivemaxSpeedParam {
+		from Deactivated
+		to Deactivated
+		trigger ExploremaxSpeedParam ? maxSpeedParam 
+	}
+
+	transition ReadyReceivemaxSpeedParam {
+		from Ready
+		to Ready
+		trigger ExploremaxSpeedParam ? maxSpeedParam 
+	}
+
+	transition InitialiseReceivePriorityParam {
+		from Initialise
+		to Initialise
+		trigger ExplorePriorityParam ? PriorityParam 
+	  	action PriorityParamInitialised = 	true  
+	
+	}
+
+	transition DeactivatedReceivePriorityParam {
+		from Deactivated
+		to Deactivated
+		trigger ExplorePriorityParam ? PriorityParam 
+	}
+
+	transition ReadyReceivePriorityParam {
+		from Ready
+		to Ready
+		trigger ExplorePriorityParam ? PriorityParam 
+	}
+
+	 
+} 
+
+
+

@@ -1,0 +1,606 @@
+/********************************************************************************
+ * Copyright (c) 2022 University of York and others
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0.
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ *
+ * Contributors:
+ *   William Barnett - initial definition
+ ********************************************************************************/
+
+
+
+/*************************
+ * Constants
+ **************************/
+operation rc_separator(): String {
+	return "::";
+}
+
+operation rc_importall(): String {
+	return rc_separator() + "*";
+}
+
+
+/*************************
+ * Imports
+ **************************/
+ 
+operation getPackageImport( packageName:String ) : RoboChart!Import {
+ 	var definedPackages = RoboChart!RCPackage.allInstances().select(pkg | pkg.name.isDefined() );
+ 	
+ 	printDebug("find - " + packageName );
+ 	
+ 	var foundPackage = definedPackages.selectOne( pkg: RoboChart!RCPackage | packageName = pkg.name.asString().split( rc_separator() ).last()  );
+	
+	printDebug("found package - " + foundPackage.name );
+	
+	var packageImport = new RoboChart!Import;
+	packageImport.importedNamespace = foundPackage.name + rc_importall();
+		
+ 	return packageImport;
+ }
+
+operation STD_IMPORT_CORE() : RoboChart!Import{
+
+	var coreImport = new RoboChart!Import;
+	
+	coreImport.importedNamespace = "core::*";
+	
+	return coreImport;
+}
+
+operation STD_IMPORT_SET_TOOLKIT() : RoboChart!Import{
+
+	var setImport = new RoboChart!Import;
+	
+	setImport.importedNamespace = "set_toolkit::*";
+	
+	return setImport;
+}
+
+operation STD_IMPORT_SEQUENCE_TOOLKIT() : RoboChart!Import{
+
+	var seqImport = new RoboChart!Import;
+	
+	seqImport.importedNamespace = "sequence_toolkit::*";
+	
+	return seqImport;
+}
+
+operation STD_IMPORT_FUNCTION_TOOLKIT() : RoboChart!Import{
+
+	var functionImport = new RoboChart!Import;
+	
+	functionImport.importedNamespace = "function_toolkit::*";
+	
+	return functionImport;
+}
+
+operation STD_IMPORT_RELATION_TOOLKIT() : RoboChart!Import{
+
+	var relationImport = new RoboChart!Import;
+	
+	relationImport.importedNamespace = "relation_toolkit::*";
+	
+	return relationImport;
+}
+
+/*************************
+ * Defs to Refs
+ **************************/
+ 
+operation RCTypeDefToRef(def: RoboChart!TypeDecl): RoboChart!TypeRef{
+ 	var typeRef = new RoboChart!TypeRef;
+ 	typeRef.ref = def;
+ 	
+ 	return typeRef;
+ }
+ 
+//operation RCTypeDefsToRefs(def:Collection(RoboChart!TypeDecl)){
+// 	typeRefs : Sequence()
+//}
+
+operation ControllerDefsToControllerRefs( defs:Collection(RoboChart!ControllerDef) ){
+	var refs: Sequence(RoboChart!ControllerRef);
+	
+	for (def: RoboChart!ControllerDef in defs ){ 
+		refs.add( PopulateControllerRef(def) );
+	}
+	
+	return refs;
+}
+
+/*operation ControllerDefToControllerRef(def:RoboChart!ControllerDef): RoboChart!ControllerRef{
+	var ref = new RoboChart!ControllerRef;
+	
+	ref.name = def.name;
+	ref.ref = def;
+	
+	return ref;
+}*/
+
+operation RoboChart!ControllerRef populateControllerRef(def:RoboChart!ControllerDef) {
+	self.name = def.name;
+	self.ref = def;
+}
+
+operation RoboChart!RoboticPlatformRef populatePlatformRef(def:RoboChart!RoboticPlatformDef) {
+	self.name = def.name;
+	self.ref = def;
+}
+
+operation RoboChart!StateMachineRef populateStateMachineRef(def:RoboChart!StateMachineDef) {
+	self.name = def.name;
+	self.ref = def;
+}
+
+
+operation RoboChart!StateMachineDef getRef(): RoboChart!StateMachineRef {
+	
+	var ref: new RoboChart!StateMachineRef;
+	
+	ref.name = self.name;
+	ref.ref =  self;
+	
+	return ref;
+}
+
+
+
+
+operation Collection(Any) unique(): Any{
+		if (self.size <> 1) {
+			throw "Collection with " + self.size().asString() + " elements cannot be unique - " + self.asString();
+			
+		} else{
+			return self.asOrderedSet().first();
+		}
+}
+
+operation RoboticPlatformDefsToRoboticPlatformRefs( defs:Set(RoboChart!RoboticPlatformDef) ){
+	var refs: Sequence(RoboChart!RoboticPlatformRef);
+	
+	for (def: RoboChart!RoboticPlatformDef in defs ){
+		refs.add( RoboticPlatformDefToRef(def) );
+	}
+	
+	return refs;
+}
+
+operation RoboticPlatformDefToRef (def:RoboChart!RoboticPlatformDef): RoboChart!RoboticPlatformRef{
+	var ref = new RoboChart!RoboticPlatformRef;
+	
+	ref.name = def.name;
+	ref.ref = def;
+	
+	return ref;
+}
+
+
+operation StatemachineDefsToStateMachineRefs(defs:Collection(RoboChart!StateMachineRef)){
+	var stmRefs : Sequence(RoboChart!StateMachineRef);
+	
+	for (def: RoboChart!StateMachineDef in defs){
+		stmRefs.add( StatemachineDefToStateMachineRef(def) );
+	}
+
+	return stmRefs;
+}
+
+operation StatemachineDefToStateMachineRef(def:RoboChart!StateMachineDef): RoboChart!StateMachineRef{
+	var stmRef = new RoboChart!StateMachineRef;
+	
+	stmRef.name = def.name;
+	stmRef.ref = def;
+
+	return stmRef;
+}
+
+
+
+/*************************
+ * Rule
+ **************************/
+
+//operation LayersToRCPackages( layers:Set(RoboArch!Layer) ){
+//	var 
+//	increaseDebug();
+//	return defs.equivalent();
+//	decreaseDebug();
+//}
+
+
+/*************************
+ * Copy
+ **************************/
+
+operation CopyRCPackage(source:RoboChart!RCPackage, destination: RoboChart!RCPackage){
+	destination.name = source.name ;
+	destination.controllers = source.controllers.clone() ;
+	destination.functions = source.functions ;
+	destination.imports = source.imports ;
+	destination.interfaces = source.interfaces ;
+	destination.machines = source.machines ;
+	destination.modules = source.modules ;
+	destination.operations = source.operations ;
+	destination.robots = source.robots ;
+	destination.types = source.types ;
+	
+	printDebug("pp " + source.asString());
+	printDebug("pp " + source.interfaces.asString());
+	printDebug("pp " + source.machines.asString());
+}
+
+operation CopyControllerReference(source:RoboChart!ControllerRef , destination:RoboChart!ControllerRef){
+	destination.name = source.name;
+	destination.ref = source.ref;
+}
+
+operation RoboChart!TypeRef clone() : RoboChart!TypeRef {
+	var copy = new RoboChart!TypeRef;
+	
+	copy.ref = self.ref;
+	
+	return copy;
+}
+
+
+/*************************
+ * Filter
+ **************************/
+operation GetMachinesFromPackages(packages:Collection(RoboChart!RCPackage)){
+	var foundMachines : Sequence(RoboChart!StateMachineDef);
+		
+	for (package: RoboChart!RCPackage in packages){
+	printDebug("gmf " + package.machines.asString());
+		foundMachines.addAll(package.machines);
+	}
+	printDebug("gmf " + foundMachines.asString());
+	return foundMachines;
+}
+
+
+/*************************
+ * Create
+ **************************/
+
+operation CreateRCEvent(name:String): RoboChart!Event{
+	var event: RoboChart!Event = new RoboChart!Event;
+	event.name = name;
+	event.broadcast = false;
+	return event;
+}
+
+operation CreateRCEvent(name:String, type: RoboChart!Type): RoboChart!Event{
+	var event: RoboChart!Event = new RoboChart!Event;
+	
+	var newType;
+	
+	if (type.isTypeOf(RoboChart!TypeRef) ){
+		//Ref need to be duplicated for each event created.
+		newType = type.clone();
+	} else {
+		newType = type;
+	}
+
+	event.name = name;
+	event.broadcast = false;
+	event.type = newType;
+	return event;
+}
+
+
+operation CreateRCVariable(name:String, type: RoboChart!Type): RoboChart!Variable{
+	var variable: RoboChart!Variable = new RoboChart!Variable;
+	
+	var newType;
+	
+	if (type.isTypeOf(RoboChart!TypeRef) ){
+		//Ref need to be duplicated for each event created.
+		newType = type.clone();
+	} else {
+		newType = type;
+	}
+
+	variable.name = name;
+	variable.type = newType;
+	return variable;
+}
+
+operation CreateRCVariable(name:String, type: RoboChart!Type, value: RoboChart!Expression): RoboChart!Variable{
+	var newType =  CreateRCVariable(name, type);
+	newType.initial = value;
+	
+	return newType;
+}
+
+operation CreateRCSeq(type: RoboChart!Type): RoboChart!SeqType{
+	var seq = new RoboChart!SeqType;
+	seq.domain = type;
+	return seq;
+}
+
+operation CreateRCSet(type: RoboChart!Type): RoboChart!SetType{
+	var set = new RoboChart!SetType;
+	set.domain = type;
+	return set;
+}
+
+operation CreateRCProduct(types: Collection(RoboChart!Type) ): RoboChart!ProductType{
+	var product = new RoboChart!ProductType;
+	product.types = types;
+	return product;
+}
+
+operation CreateRCAnyType(identifier:String): RoboChart!AnyType{
+	var any = new RoboChart!AnyType;
+	any.identifier = identifier;
+	return any;
+}
+
+operation CreateRCParameter(name: String, type: RoboChart!Type): RoboChart!Parameter{
+	var parameter = new RoboChart!Parameter;
+	
+	parameter.name = name;
+	parameter.type = type;
+	
+	return parameter;
+}
+
+// TODO rename to be more specific
+operation CreateRCExpression(value: Boolean): RoboChart!Expression {
+	var expression: RoboChart!BooleanExp = new RoboChart!BooleanExp;
+	
+	if (value){
+		expression.value = "true";
+	}else{
+		expression.value = "false";
+	}
+	
+	return expression;
+}
+
+
+operation CreateRCAnd(left: RoboChart!Expression, right: RoboChart!Expression ): RoboChart!Expression {
+	var newAnd: RoboChart!And = new RoboChart!And;
+	
+	newAnd.left = left;
+	newAnd.right = right;
+	
+	return newAnd;
+}
+
+operation CreateRCRefExp(ref: RoboChart!NamedExpression): RoboChart!RefExp{
+
+	var newRefExp = new RoboChart!RefExp;
+	
+	newRefExp.ref = ref; 
+
+	return newRefExp;
+}
+
+operation RoboChart!NamedExpression createRefExp(): RoboChart!RefExp{
+	return CreateRCRefExp(self);
+}
+
+operation CreateRCRefExp(ref: RoboChart!VarRef): RoboChart!RefExp{
+
+	return CreateRCRefExp(ref.name);
+}
+
+operation RoboChart!VarRef varRefToRefExp(): RoboChart!RefExp {
+	var newRefExp = CreateRCRefExp(self);
+		
+	delete self;
+	return newRefExp;
+}
+
+operation CreateRCAssignment(left: RoboChart!Assignable, right: RoboChart!Expression ): RoboChart!Assignment{
+
+	var newAssignment = new RoboChart!Assignment;
+	
+	newAssignment.left = left; 
+	newAssignment.right = right;
+
+	return newAssignment;
+}
+ 
+operation CreateRCVarRef(name: RoboChart!Variable): RoboChart!VarRef{
+
+	var newVarRef = new RoboChart!VarRef;
+	
+	newVarRef.name = name; 
+
+	return newVarRef;
+}
+ 
+operation CreateRCSeqStatement( statements: Sequence(RoboChart!Statement) ): RoboChart!SeqStatement {
+	var newSeqStatement = new RoboChart!SeqStatement;
+	printDebug("Adding statements: " + statements.asString() );
+	newSeqStatement.statements.addAll( statements );
+	
+	return newSeqStatement;
+}
+
+operation CreateRCSendEvent( trigger: RoboChart!Trigger ): RoboChart!SendEvent {
+	var newSendEvent = new RoboChart!SendEvent;
+	
+	newSendEvent.trigger = trigger;
+	
+	return newSendEvent;
+}
+
+operation CreateRCEntryAction( action: RoboChart!Statement ): RoboChart!EntryAction {
+	var newAction = new RoboChart!EntryAction;
+	
+	newAction.action = action;
+	
+	return newAction;
+}
+
+operation CreateRCDuringAction( action: RoboChart!Statement ): RoboChart!DuringAction {
+	var newAction = new RoboChart!DuringAction;
+	
+	newAction.action = action;
+	
+	return newAction;
+}
+
+operation CreateRCExitAction( action: RoboChart!Statement ): RoboChart!ExitAction {
+	var newAction = new RoboChart!ExitAction;
+	
+	newAction.action = action;
+	
+	return newAction;
+ }
+ 
+ operation Skip(): RoboChart!Skip {
+	return new RoboChart!Skip;
+ }
+ 
+  operation CreateRCNeg(exp: RoboChart!Expression): RoboChart!Neg {
+  	var negExp = new RoboChart!Neg;
+  	
+  	negExp.exp = exp;
+	
+	return negExp;
+ }
+ 
+  operation CreateRCTupleExp( values: Sequence(RoboChart!Expression) ): RoboChart!TupleExp {
+  	var newTuple = new RoboChart!TupleExp;
+  	
+  	newTuple.values.addAll(values);
+  	
+	return newTuple;
+ }
+ 
+ operation CreateRCClock( name: String ) {
+ 	var newClock = new RoboChart!Clock;
+ 	
+ 	newClock.name = name;
+ 	
+ 	return newClock;
+ }
+ 
+operation CreateRCSetExp( values: Collection(RoboChart!Expression) ) : RoboChart!SetExp {
+	var newSetExp = new RoboChart!SetExp;
+	
+	newSetExp.values = values;
+	
+	return newSetExp;
+}
+
+operation CreateRCSeqExp( values: Collection(RoboChart!Expression) ) : RoboChart!SeqExp {
+	var newSeqExp = new RoboChart!SeqExp;
+	
+	newSeqExp.values = values;
+	
+	return newSeqExp;
+}
+
+ operation CreateRCClockReset( clock: RoboChart!Clock): RoboChart!ClockReset {
+ 	var newClockReset = new RoboChart!ClockReset;
+ 	
+ 	newClockReset.clock = clock;
+ 	
+ 	return newClockReset;
+ }
+ 
+  operation CreateRCClockExp( clock: RoboChart!Clock): RoboChart!ClockExp {
+  	// Textual notation equivalent to Since()
+ 	var newClockExp = new RoboChart!ClockExp;
+ 	
+ 	newClockExp.clock = clock;
+ 	
+ 	return newClockExp;
+ }
+ 
+ 
+  
+  operation CreateRCParExp( exp: RoboChart!Expression): RoboChart!ParExp {
+  
+ 	var newParExp = new RoboChart!ParExp;
+ 	
+ 	newParExp.exp = exp;
+ 	
+ 	return newParExp;
+ }
+ 
+   operation CreateRCParStmt( stmt: RoboChart!Statement): RoboChart!ParStmt {
+  
+ 	var newParStmt = new RoboChart!ParStmt;
+ 	
+ 	newParStmt.stmt = stmt;
+ 	
+ 	return newParStmt;
+ }
+ 
+ 
+   operation CreateRCIntegerExp( value: Integer ): RoboChart!IntegerExp {
+  
+ 	var newIntExp = new RoboChart!IntegerExp;
+ 	
+ 	newIntExp.value = value;
+ 	
+ 	return newIntExp;
+ }
+ 
+
+
+ 
+ 
+/*  operation CreateRCVariableList( modifier: RoboChart!VariableModifier, vars: Set(RoboChart!Variable) ): RoboChart!VariableList {
+  	var newVarList = new RoboChart!VariableList;
+  	
+  	newVarlist.modifier = modifier;
+  	newVarList.vars = vars;
+  	
+	return newVarlist;
+ }  */
+
+
+/*************************
+ * Expressions
+ **************************/
+
+$pre (terms.size() > 1)
+operation AndExp( terms: Sequence(RoboChart!Expression) ):RoboChart!And {
+	return  AndExp(terms, null);
+}
+
+operation AndExp( terms: Sequence(RoboChart!Expression), expr: RoboChart!And ):RoboChart!And {
+	
+	if( terms.isEmpty() ){
+		printDebug("@@@ andF " + terms.asString() );
+		return expr;
+		
+	} else if (expr = null and terms.size() > 1 ){
+		printDebug("@@@ andI " + terms.asString() );
+		return AndExp( tail( tail(terms) ), CreateRCAnd( CreateRCRefExp(head(terms)), CreateRCRefExp(head(tail(terms))) ) );
+		
+	}  else if (expr <> null and terms.notEmpty() ){
+		printDebug("@@@ and1 " + terms.asString() );
+		return AndExp( tail(terms), CreateRCAnd( CreateRCRefExp(head(terms)), expr)  );
+	
+	}else{
+		throw "Error: creating AndExp failed.";
+	} 
+	
+	
+	
+	/*if (terms.size() = 2){
+		printDebug("@@@ and2 " + terms.asString() );
+		var newExp =  CreateRCAnd( CreateRCRefExp(terms.first()), CreateRCRefExp(terms.second()) );
+		expression = newExp;
+		return ;
+		
+	} else {
+		printDebug("@@@ and+ " + terms.asString() );
+		return AndExp( tail(terms));
+		
+	} */
+}

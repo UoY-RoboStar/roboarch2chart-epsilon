@@ -1,0 +1,22 @@
+package maildelivery::exe 
+
+import maildelivery::types::*
+import maildelivery::exe::stm0::* 
+
+controller Exe {
+	
+event deliverMail : Office
+	event destinationReached
+	event location : Coordinate
+	event doorFound
+
+	event mailPickedup
+	event deliveryComplete
+	event pickupFailed
+	event destination : Coordinate
+	event doorToFind : nat
+	event getLocation
+	event speak : string
+	sref stm_ref0 = stm0
+}
+

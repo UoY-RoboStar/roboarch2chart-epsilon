@@ -1,0 +1,25 @@
+package maildelivery 
+
+module OfficeDelivery {
+	cref ctrl_ref0 = Pln
+
+	cref ctrl_ref1 = Exe
+
+	cref ctrl_ref2 = Ctl
+connection ctrl_ref0 on deliverMail to ctrl_ref1 on deliverMail
+	connection ctrl_ref1 on deliveryComplete to ctrl_ref0 on deliveryComplete
+	connection ctrl_ref1 on pickupFailed to ctrl_ref0 on pickupFailed
+	rref rp_ref0 = DeliveryRobot
+connection ctrl_ref1 on destination to ctrl_ref2 on destination
+	connection ctrl_ref1 on doorToFind to ctrl_ref2 on doorToFind
+	connection ctrl_ref1 on getLocation to ctrl_ref2 on getLocation
+	connection ctrl_ref1 on speak to ctrl_ref2 on speak
+	connection ctrl_ref2 on location to ctrl_ref1 on location
+	connection ctrl_ref2 on destinationReached to ctrl_ref1 on destinationReached
+	connection ctrl_ref2 on doorFound to ctrl_ref1 on doorFound
+connection rp_ref0 on envPoints to ctrl_ref2 on envPoints ( _async )
+	connection rp_ref0 on envColourPoints to ctrl_ref2 on envColourPoints ( _async )
+connection ctrl_ref2 on mailPickedUp to ctrl_ref1 on mailPickedup
+}
+
+import maildelivery::types::* import maildelivery::functions::* import maildelivery::deliveryrobot::* import maildelivery::ctl::*  import  maildelivery::exe::* import maildelivery::pln::* 

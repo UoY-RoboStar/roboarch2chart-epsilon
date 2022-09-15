@@ -1,0 +1,120 @@
+
+
+<project>
+
+	
+	<include file="Test-Paths.xml"/>
+	<include file="${erules.base.location}/scripts/Run-ModelManagement.xml"/>
+	<include file="Test-ModelManagement.xml"/>
+	
+	<!-- TEST TEXT --> 
+	<property name="ra.text.emptycontrollayer" value="${ra.text.location}/EmptyControlLayer.rac" />
+	<property name="ra.text.threeemptylayers" value="${ra.text.location}/ThreeEmptyLayers.rac" />
+	
+	<!-- GENERATED ROBOCHART MODELS 
+	<property name="rc.model.threeemptylayers" value="${rc.text.location}/ThreeEmptyLayers/ThreeEmptyLayers.rct" />
+	<property name="rc.model.emptycontrollayer" value="${rc.text.location}/EmptyControlLayer/EmptyControlLayer.rct" />
+	-->
+	
+	<!-- EXPECTED ROBOCHART TEXT -->
+	<property name="rc.exp.text.emptycontrollayer" value="${uri.eclipse.prefix}/EmptyControlLayer/EmptyControlLayer.rct" />
+	<property name="rc.exp.text.threeemptylayers" value="${uri.eclipse.prefix}/ThreeEmptyLayers/ThreeEmptyLayers.rct" />
+	
+	<!-- UNIT TESTS -->
+	<property name="toplevel.eunit.location" location="${tests.location}/top-level.eunit"/>
+
+	<echo>  tests.location:  ${tests.location}		</echo>
+	<echo>  ra.text.threeemptylayers:  ${ra.text.threeemptylayers}		</echo>
+	<echo>  rc.exp.text.threeemptylayers:  ${rc.exp.text.threeemptylayers}		</echo>
+	<echo>  rc.model.threeemptylayers:  ${rc.model.threeemptylayers}		</echo>
+	<echo> ${start-timestamp} </echo>
+	
+	<!-- MODEL LOADING TARGETS - TOP-LEVEL -->
+	
+	<target name="load-three-empty-layers-models" description="Load the ThreeEmptyLayers model.">
+		
+		<!-- Three Empty Layers -->
+		
+		<roboarch2chart.load name="RA_ThreeEmptyLayers"
+			modeluri="${ra.text.threeemptylayers}"
+			metamodeluri="${ra.metamodel.uri}"
+			read="true" store="false" expand="true" failonerrors="true" cached="false" />
+		
+		<robochart2sim.load name="RC_ThreeEmptyLayers"
+			modeluri="${rc.exp.text.threeemptylayers}"
+			metamodeluri="http://www.robocalc.circus/RoboChart"
+			read="true" store="false" expand="true" failonerrors="true" cached="false" />
+		
+		<epsilon.emf.loadModel name="GenRC_ThreeEmptyLayers"
+			modelFile="${transformed.model.location}/ThreeEmptyLayers_${start-timestamp}.model" 
+			metamodelUri="${rc.metamodel.uri}"
+			read="false" 
+			store="true"
+			expand="true"
+			cached="false"/>
+	</target>
+	
+	<target name="store-three-empty-layers-models" description="Store the ThreeEmptyLayers model.">
+		<!-- separate store not used, just in case there are sided effects to adding a timestamp on dispose,
+		     disposing models with the same name appears to append to the model over separate build.-->
+		<epsilon.emf.storeModel 
+					model="${transformed.model.location}/ThreeEmptyLayers_${start-timestamp}.model" 
+					targetUri="${rc.metamodel.uri}"/>
+	</target>
+	
+	<target name="load-empty-control-layer-models" description="Load the EmptyControlLayer model.">
+		
+		<!-- Empty Control Layer -->
+		
+		<roboarch2chart.load name="RA_EmptyControlLayer"
+			modeluri="${ra.text.emptycontrollayer}"
+			metamodeluri="${ra.metamodel.uri}"
+			read="true" store="false" expand="true" failonerrors="true" cached="false" />
+		
+		<robochart2sim.load name="RC_EmptyControlLayer"
+			modeluri="${rc.exp.text.emptycontrollayer}"
+			metamodeluri="http://www.robocalc.circus/RoboChart"
+			read="true" store="false" expand="true" failonerrors="true" cached="false" />
+		
+		<epsilon.emf.loadModel name="GenRC_EmptyControlLayer"
+			modelFile="${transformed.model.location}/EmptyControlLayer_${start-timestamp}.model" 
+			metamodelUri="${rc.metamodel.uri}"
+			read="false" 
+			store="true"
+			expand="true"
+			cached="false"/>
+	</target>
+
+
+	
+	<!-- EUNIT TARGETS -->
+	
+	<target name="run-toplevel-tests" description="Loads models using a separate Ant target">
+		
+		<!-- Setup global epsilon variables -->
+        <epsilon.eol>
+            <![CDATA[
+        		// Global epsilon variables
+	        	var ruleName : String;
+	        	var elementName : String;
+	        	var elementType : Any;
+        		var ruleOutput: Any;
+            ]]>
+			<exports ref="ruleName" as="TestRuleName"/>
+			<exports ref="elementName" as="TestElementName"/>
+			<exports ref="elementType" as="TestElementType"/>
+        	<exports ref="ruleOutput" as="TestRuleOutput"/>
+        </epsilon.eol>
+		
+		<!-- Run eunit tests -->
+		<epsilon.eunit src="${toplevel.eunit.location}">
+			<uses ref="TestRuleName" as="currentRuleName"/>
+			<uses ref="TestElementName" as="currentElementName"/>
+			<uses ref="TestElementType" as="currentElementType"/>
+			<uses ref="TestRuleOutput" as="currentRuleOutput"/>
+		</epsilon.eunit>
+		
+		<epsilon.disposeModels/>
+	</target>
+	
+</project>

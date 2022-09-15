@@ -1,0 +1,22 @@
+package ReactiveSkillsObstacleAvoidanceMonitor
+
+import Types::* 
+import Platform::* 
+import Control::* 
+
+
+
+
+ module ReactiveSkillsObstacleAvoidanceMonitor {
+	
+	 cref Control = Control
+
+	 rref Platform = Platform
+
+	
+	
+		 
+connection Platform on ProximitygapPlatform to Control on ProximitygapPlatform ( _async )
+	connection Control on MovevInPlatform to Platform on MovevInPlatform ( _async )
+}
+

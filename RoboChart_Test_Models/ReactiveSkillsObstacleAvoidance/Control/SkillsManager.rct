@@ -1,0 +1,207 @@
+package Control::SkillsManager
+
+import Types::* 
+import Control::DSkill::Move::* 
+import Control::DSkill::Proximity::* 
+import Control::CSkill::Explore::* 
+
+
+
+
+
+stm SkillsManager { 
+	
+	
+	uses IControl
+	uses IMove
+	uses IProximity
+	uses IExplore
+	
+	
+	
+	
+	var currentlyActiveSkills : Set( Skills )  , nextCycleSkills : Seq( Skills )  , updateRecordComplete : boolean , executingSkill : Skills , cycleSkills : Seq( Skills )  , activationRequest : Skills , newExploreobstacleDistance : boolean , newExplorevOut : boolean , newMovevIn : boolean , ExplorePriority : nat , MovePriority : nat , ProximityPriority : nat , currentMovevIn : Velocities * nat , currentProximitygap : Length * nat , currentExploreobstacleDistance : Length * nat , currentExplorevOut : Velocities * nat 
+	 const REQUEST_HANDLING_DELAY : nat , ASYNCHRONOUS_SKILLS : Seq( Skills )  
+	
+	clock requestHandling 
+
+	 state HandleValueQueries { 
+	}
+
+	 state CheckMonitors { 
+	}
+
+	initial Initial
+
+	 state DoNextSkill { 
+	}
+
+	 state HandleActiveSkills { 
+	}
+
+	 state HandleDeactivation { 
+	}
+
+	 state HandleGetParameter { 
+	}
+
+	 state UpdateRecord { 
+	}
+
+	 state ExecutingProximity { 
+	}
+
+	 state ExecutingMove { 
+	}
+
+	 state ExecutingExplore { 
+	}
+
+	 state HandleSetParameter { 
+	}
+
+	 state HandleActivation { 
+	}
+
+	 state Initialise { 
+		entry currentlyActiveSkills = 	{  }   
+		; cycleSkills = 	<  >   
+		; nextCycleSkills = 	<  >   
+		; newExploreobstacleDistance = 	false  
+		; newMovevIn = 	false  
+		; # requestHandling 
+	
+	}
+
+	 state Cleanup { 
+	}
+
+	transition ExecutingMoveToUpdateRecord {
+		from ExecutingMove
+		to UpdateRecord
+	}
+
+	transition DoNextSkillToExecutingProximity {
+		from DoNextSkill
+		to ExecutingProximity
+	}
+
+	transition HandleGetParameterToHandleSetParameter {
+		from HandleGetParameter
+		to HandleSetParameter
+		condition 	since( requestHandling )  > REQUEST_HANDLING_DELAY  
+	
+	  	action # requestHandling 
+	}
+
+	transition HandleDeactivationToHandleGetParameter {
+		from HandleDeactivation
+		to HandleGetParameter
+		condition 	since( requestHandling )  > REQUEST_HANDLING_DELAY  
+	
+	  	action # requestHandling 
+	}
+
+	transition InitialiseToHandleValueQueries {
+		from Initialise
+		to HandleValueQueries
+	}
+
+	transition HandleSetParameterToDoNextSkill {
+		from HandleSetParameter
+		to DoNextSkill
+		condition 	since( requestHandling )  > REQUEST_HANDLING_DELAY  
+	
+	  	action # requestHandling 
+	}
+
+	transition CheckMonitorsToCleanup {
+		from CheckMonitors
+		to Cleanup
+	}
+
+	transition DoNextSkillToExecutingExplore {
+		from DoNextSkill
+		to ExecutingExplore
+	}
+
+	transition ExecutingProximityToUpdateRecord {
+		from ExecutingProximity
+		to UpdateRecord
+	}
+
+	transition CleanupToHandleValueQueries {
+		from Cleanup
+		to HandleValueQueries
+	}
+
+	transition HandleValueQueriesReceivegetExploreVOutValue {
+		from HandleValueQueries
+		to HandleValueQueries
+		trigger getExploreVOutValue 
+	  	action ExplorevOutValue ! 	( currentExplorevOut[1] )   
+	 
+	}
+
+	transition DoNextSkillToExecutingMove {
+		from DoNextSkill
+		to ExecutingMove
+	}
+
+	transition InitialToInitialise {
+		from Initial
+		to Initialise
+	}
+
+	transition HandleValueQueriesReceivegetProximityGapValue {
+		from HandleValueQueries
+		to HandleValueQueries
+		trigger getProximityGapValue 
+	  	action ProximitygapValue ! 	( currentProximitygap[1] )   
+	 
+	}
+
+	transition HandleActivationToHandleDeactivation {
+		from HandleActivation
+		to HandleDeactivation
+		condition 	since( requestHandling )  > REQUEST_HANDLING_DELAY  
+	
+	  	action # requestHandling 
+	}
+
+	transition HandleValueQueriesToHandleActiveSkills {
+		from HandleValueQueries
+		to HandleActiveSkills
+		condition 	since( requestHandling )  > REQUEST_HANDLING_DELAY  
+	
+	  	action # requestHandling 
+	}
+
+	transition CheckMonitorsToDoNextSkill {
+		from CheckMonitors
+		to DoNextSkill
+	}
+
+	transition ExecutingExploreToUpdateRecord {
+		from ExecutingExplore
+		to UpdateRecord
+	}
+
+	transition HandleActiveSkillsToHandleActivation {
+		from HandleActiveSkills
+		to HandleActivation
+		condition 	since( requestHandling )  > REQUEST_HANDLING_DELAY  
+	
+	  	action # requestHandling 
+	}
+
+	transition UpdateRecordToCheckMonitors {
+		from UpdateRecord
+		to CheckMonitors
+	}
+
+	 
+} 
+
+
+

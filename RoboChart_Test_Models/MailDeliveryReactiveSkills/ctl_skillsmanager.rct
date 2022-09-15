@@ -1,0 +1,445 @@
+package maildelivery::ctl::skillsmanager
+
+import set_toolkit::* 
+import sequence_toolkit::* 
+import maildelivery::types::*
+
+import maildelivery::ctl::move::*
+import maildelivery::ctl::colourvision::*
+import maildelivery::ctl::proximity::*
+import maildelivery::ctl::movetolocation::*
+import maildelivery::ctl::determinelocation::*
+
+stm SkillsManager { 
+	uses ISkillsManager
+	uses IMove
+	uses IColourVision
+	uses IProximity
+	uses IMoveToLocation
+	uses IDetermineLocation
+	
+	
+	
+	var activationRequest : Skills , cycleSkills : Seq( Skills ) , currentlyActiveSkills : Set( Skills ) , monitorRequest : Events , currentlyActiveMonitors : Set( Events ) , 
+	    
+		newMoveVelocity : boolean , 
+		newColourVisionEnvColourPoints : boolean , 
+		newProximityEnvPoints : boolean ,
+		newMoveToLocationCurrent : boolean ,
+		newMoveToLocationHazards : boolean ,
+		newMoveToLocationVelocity : boolean ,
+		newDetermineLocationImage : boolean ,
+		newDetermineLocationLocation : boolean ,
+	
+		movePriority : nat , colourVisionPriority : nat ,  proximityPriority : nat, moveToLocationPriority : nat, determineLocationPriority : nat,
+		moveToLocationTarget : Coordinate , 
+	
+		currentMoveVelocity : Velocities * nat , 
+		currentColourVisionEnvColourPoints : PointImage * nat , 
+		currentProximityEnvPoints : Scan * nat ,
+		currentMoveToLocationCurrent : Coordinate * nat ,
+		currentMoveToLocationHazards : Scan * nat ,
+		currentMoveToLocationVelocity : Velocities * nat ,
+		currentDetermineLocationImage : PointImage * nat ,
+		currentDetermineLocationLocation : Coordinate * nat ,
+	
+	executingSkills : Set( Skills ) , setExecuting : Skills , monitorsToCheck : Set( Events )
+	
+	const REQUEST_HANDLING_DELAY : nat , ASYNCHRONOUS_SKILLS : Seq( Skills ) = < > 
+	
+	clock requestHandling
+
+	state Initialise {
+		entry currentlyActiveSkills = { } ; cycleSkills = < > ; 
+			newMoveVelocity = false; 
+			newColourVisionEnvColourPoints = false; 
+			newProximityEnvPoints = false; 
+			newMoveToLocationCurrent = false; 
+			newMoveToLocationHazards = false; 
+			newMoveToLocationVelocity = false; 
+			newDetermineLocationImage = false; 
+			newDetermineLocationLocation = false; 
+		
+		# requestHandling 
+	
+	}
+
+	state UpdateRecord {
+		entry if (newMoveVelocity/\(filter(cycleSkills, {Skills::MOVE})==<>)) then cycleSkills = concat(cycleSkills, <Skills::MOVE>); newMoveVelocity = false end;
+			  if (newMoveToLocationCurrent/\newMoveToLocationHazards /\(filter(cycleSkills, {Skills::MOVETOLOCATION})==<>)) then cycleSkills = concat(cycleSkills, <Skills::MOVETOLOCATION>); newMoveToLocationCurrent = false; newMoveToLocationHazards = false end;
+			  if (newDetermineLocationImage/\(filter(cycleSkills, {Skills::DETERMINELOCATION})==<>)) then cycleSkills = concat(cycleSkills, <Skills::DETERMINELOCATION>); newDetermineLocationImage = false end
+				
+	}
+
+	initial SkillsManagerInitial
+
+	 state DoNextSkill {
+		entry executingSkills = { }
+
+		state ExecuteMove {
+			entry moveVelocity ! ( currentMoveVelocity [ 1 ] ) ; executeMove
+		}
+		state ExecuteColourVision {
+			entry executeColourVision
+		}
+		initial DoNextSkillInitial
+		final DoNextSkillFinal
+		junction DoNextSkillJunctionEmptyCycleSkills
+		state Next {
+			entry setExecuting = head ( cycleSkills ) ; cycleSkills = tail ( cycleSkills )
+		}
+		transition InitialToJunctionEmptyCycleSkills {
+			from DoNextSkillInitial
+			to DoNextSkillJunctionEmptyCycleSkills
+		}
+		transition NextMoveToExecuteMove {
+			from Next
+			to ExecuteMove
+			condition setExecuting == Skills :: MOVE
+		}
+		transition NextToExecuteColourVision {
+			from Next
+			to ExecuteColourVision
+			condition setExecuting == Skills :: COLOURVISION
+		}
+		transition ExecuteColourVisionToJunctionEmptyCycleSkills {
+			from ExecuteColourVision
+			to DoNextSkillJunctionEmptyCycleSkills
+			action executingSkills = union ( executingSkills , { Skills :: COLOURVISION } )
+		}
+		transition ExecuteMoveToJunctionEmptyCycleSkills {
+			from ExecuteMove
+			to DoNextSkillJunctionEmptyCycleSkills
+			action executingSkills = union ( executingSkills , { Skills :: MOVE } )
+		}
+		transition JunctionEmptyCycleSkillToFinal {
+			from DoNextSkillJunctionEmptyCycleSkills
+			to DoNextSkillFinal
+			condition cycleSkills == < >
+		}
+		transition JunctionEmptyCycleSkillsToNext {
+			from DoNextSkillJunctionEmptyCycleSkills
+			to Next
+			condition isNonEmpty ( cycleSkills )
+		}
+	state ExecuteMoveToLocation {
+			entry moveToLocationCurrent ! ( currentMoveToLocationCurrent [ 1 ] ) ; moveToLocationHazards ! ( currentMoveToLocationHazards [ 1 ] ) ; executeMoveToLocation
+		}
+		state ExecuteDetermineLocation {
+			entry determineLocationImage ! ( currentDetermineLocationImage [ 1 ] ) ; executeDetermineLocation
+		}
+		state ExecuteProximity {
+			entry executeProximity
+		}
+		transition NextToExecuteProximity {
+			from Next
+			to ExecuteProximity
+			condition setExecuting == Skills :: PROXIMITY
+		}
+		transition ExecuteProximityToJunctionEmptyCycleSkills {
+			from ExecuteProximity
+			to DoNextSkillJunctionEmptyCycleSkills
+			action executingSkills = union ( executingSkills , { Skills :: PROXIMITY } )
+		}
+		transition NextToExecuteDetermineLocation {
+			from Next
+			to ExecuteDetermineLocation
+			condition setExecuting == Skills :: DETERMINELOCATION
+		}
+		transition ExecuteDetermineLocationToJunctionEmptyCycleSkills {
+			from ExecuteDetermineLocation
+			to DoNextSkillJunctionEmptyCycleSkills
+			action executingSkills = union ( executingSkills , { Skills :: DETERMINELOCATION } )
+		}
+		transition NextToExecuteMoveToLocation {
+			from Next
+			to ExecuteMoveToLocation
+			condition setExecuting == Skills :: MOVETOLOCATION
+		}
+		transition ExecuteMoveToLocationToJunctionEmptyCycleSkills {
+			from ExecuteMoveToLocation
+			to DoNextSkillJunctionEmptyCycleSkills
+			action executingSkills = union ( executingSkills , { Skills :: MOVETOLOCATION } )
+		}
+	}
+
+	state HandleRequests { 
+	}
+
+	state CheckMonitors {
+	}
+
+	 
+state ExecutingSkills {
+	}
+
+	transition HandleGetParameterReceiveGetMoveToLocationTargetParameter {
+		from HandleRequests
+		to HandleRequests
+		trigger getMoveToLocationTargetParameter 
+	  	action moveToLocationTargetParameter ! moveToLocationTarget  
+	 
+	}
+
+	transition HandleSetParameterReceiveSetMoveToLocationTargetParameter {
+		from HandleRequests
+		to HandleRequests
+		trigger  setMoveToLocationTargetParameter ? moveToLocationTarget
+		action moveToLocationTargetParam ! moveToLocationTarget
+	}
+
+	transition ExecutingSkillsToCheckMonitors {
+		from ExecutingSkills
+		to CheckMonitors
+		condition executingSkills == { }
+		action monitorsToCheck = currentlyActiveMonitors
+	}
+	transition InitialiseToHandleValueQueries {
+		from Initialise
+		to HandleRequests
+	}
+	transition HandleDeactivationReceive {
+		from HandleRequests
+		to HandleRequests
+		trigger  deactivate ? activationRequest
+		action currentlyActiveSkills = diff ( currentlyActiveSkills , { activationRequest } )   
+	
+	}
+	transition HandleValueQueriesReceivegetColourVisionEnvColourPointsValue {
+		from HandleRequests
+		to HandleRequests
+		trigger getColourVisionEnvColourPointsValue 
+	  	action colourVisionEnvColourPointsValue ! 	( currentColourVisionEnvColourPoints [1] )   
+	 
+	}
+	transition ExecutingSkillsReceiveCompleteMoveToLocation {
+		from ExecutingSkills
+		to ExecutingSkills
+		trigger completeMoveToLocation
+		action if (Skills :: MOVETOLOCATION in executingSkills ) then executingSkills = diff ( executingSkills , { Skills :: MOVETOLOCATION } ) end
+	}
+	
+	transition ExecutingSkillsReceiveCompleteMove {
+		from ExecutingSkills
+		to ExecutingSkills
+	
+	trigger 
+		
+		completeMove
+		action if (Skills :: MOVE in executingSkills ) then executingSkills = diff ( executingSkills , { Skills :: MOVE } ) end
+	}
+
+	transition HandleRequestsToJunctionEmptyCycleSkills {
+		from HandleRequests
+		to JunctionEmptyCycleSkills
+		condition 	since( requestHandling )  > REQUEST_HANDLING_DELAY  
+	
+	  	action # requestHandling ; cycleSkills = concat ( cycleSkills , ASYNCHRONOUS_SKILLS ) ; cycleSkills = filter ( cycleSkills , currentlyActiveSkills ) 
+	}
+	transition SkillsManagerInitialToInitialise {
+		from SkillsManagerInitial
+		to Initialise
+	}
+
+	transition DoNextSkillToExecutingSkills {
+		from DoNextSkill
+		to ExecutingSkills
+	condition cycleSkills == < >
+	}
+	transition HandleActivationReceive {
+		from HandleRequests
+		to HandleRequests
+		trigger  
+	  	
+		
+		
+		
+		
+		
+		activate ? activationRequest
+		action currentlyActiveSkills = union ( currentlyActiveSkills , { activationRequest } )   
+	
+	}
+
+	transition HandleActiveSkillsReceive {
+		from HandleRequests
+		to HandleRequests
+		trigger getActiveSkills 
+	  	action activeSkills ! currentlyActiveSkills  
+	 
+	}
+	transition HandleSetParameterReceiveSetMoveToLocationPriorityParameter {
+		from HandleRequests
+		to HandleRequests
+		trigger  setMoveToLocationPriorityParameter ? moveToLocationPriority
+		action moveToLocationPriorityParam ! moveToLocationPriority
+	}
+	transition ExecutingSkillsColourVisionEnvColourPointsToUpdateRecord {
+		from ExecutingSkills
+		to UpdateRecord
+		trigger colourVisionEnvColourPoints ? currentColourVisionEnvColourPoints
+		action newDetermineLocationImage = UpdateValue ( currentDetermineLocationImage , currentColourVisionEnvColourPoints )
+	}
+	transition JunctionEmptyCycleSkillsToDoNextSkill {
+		from JunctionEmptyCycleSkills
+		to DoNextSkill
+		condition isNonEmpty ( cycleSkills )
+	}
+	transition JunctionEmptyCycleSkillsToHandleRequests {
+		from JunctionEmptyCycleSkills
+		to HandleRequests
+		condition cycleSkills == < >
+	}
+transition UpdateRecordToExecutingSkills {
+		from UpdateRecord
+		to ExecutingSkills
+	}
+	transition CheckMonitorsToCleanup {
+		from CheckMonitors
+		to HandleRequests
+		condition monitorsToCheck == { }
+		action # requestHandling
+	}
+	transition HandleInitiateMonitorReceive {
+		from HandleRequests
+		to HandleRequests
+		trigger initiateEventMonitor ? monitorRequest
+		action currentlyActiveMonitors = union ( currentlyActiveMonitors , { monitorRequest } )
+	}
+transition t0 {
+		from CheckMonitors
+		to CheckMonitors
+		condition ( Events :: DESTINATIONREACHED in monitorsToCheck )
+		action if ( currentDetermineLocationLocation [ 1 ]  == moveToLocationTarget ) then eventReply ! Events :: DESTINATIONREACHED  end ; monitorsToCheck = diff ( monitorsToCheck , { Events :: DESTINATIONREACHED } )
+	}
+transition ExecutingSkillsReceiveCompleteProximity {
+		from ExecutingSkills
+		to ExecutingSkills
+		trigger completeProximity
+		action if ( Skills :: PROXIMITY in executingSkills ) then executingSkills = diff ( executingSkills , { Skills :: PROXIMITY } ) end
+	}
+	transition ExecutingSkillsReceiveCompleteColourVision {
+		from ExecutingSkills
+		to ExecutingSkills
+		trigger completeColourVision
+		action if ( Skills :: COLOURVISION in executingSkills ) then executingSkills = diff ( executingSkills , { Skills :: COLOURVISION } ) end
+	}
+	transition ExecutingSkillsReceiveCompleteDetermineLocation {
+		from ExecutingSkills
+		to ExecutingSkills
+		trigger completeDetermineLocation
+		action if ( Skills :: DETERMINELOCATION in executingSkills ) then executingSkills = diff ( executingSkills , { Skills :: DETERMINELOCATION } ) end
+	}
+transition ExecutingSkillsMoveToLocationVelocityToUpdateRecord {
+		from ExecutingSkills
+		to UpdateRecord
+		trigger moveToLocationVelocity ? currentMoveToLocationVelocity
+		action newMoveVelocity = UpdateValue ( currentMoveVelocity , currentMoveToLocationVelocity )
+	}
+	transition ExecutingSkillsProximityEnvPointsToUpdateRecord {
+		from ExecutingSkills
+		to UpdateRecord
+		trigger proximityEnvPoints ? currentProximityEnvPoints
+		action newMoveToLocationHazards = UpdateValue ( currentMoveToLocationHazards , currentProximityEnvPoints )
+	}
+	transition ExecutingSkillsDetermineLocationLocationToUpdateRecord {
+		from ExecutingSkills
+		to UpdateRecord
+		trigger determineLocationLocation ? currentDetermineLocationLocation
+		action newMoveToLocationCurrent = UpdateValue ( currentMoveToLocationCurrent , currentDetermineLocationLocation )
+	}
+junction JunctionEmptyCycleSkills
+
+
+	transition HandleGetParameterReceiveSetMoveToLocationPriorityParameter {
+		from HandleRequests
+		to HandleRequests
+		trigger  getMoveToLocationPriorityParameter
+		action moveToLocationPriorityParameter ! moveToLocationPriority
+	}
+
+
+	transition HandleSetParameterReceiveSetMovePriorityParameter {
+		from HandleRequests
+		to HandleRequests
+		trigger  setMovePriorityParameter ? movePriority
+		action movePriorityParam ! movePriority
+	}
+	transition HandleGetParameterReceiveSetMovePriorityParameter {
+		from HandleRequests
+		to HandleRequests
+		trigger  getMovePriorityParameter
+		action movePriorityParameter ! movePriority
+	}
+
+	transition HandleSetParameterReceiveSetColourVisionPriorityParameter {
+		from HandleRequests
+		to HandleRequests
+		trigger  setColourVisionPriorityParameter ? colourVisionPriority
+		action colourVisionPriorityParam ! colourVisionPriority
+	}
+	transition HandleGetParameterReceiveSetColourVisionPriorityParameter {
+		from HandleRequests
+		to HandleRequests
+		trigger  getColourVisionPriorityParameter
+		action colourVisionPriorityParameter ! colourVisionPriority
+	}
+
+	transition HandleSetParameterReceiveSetProximityPriorityParameter {
+		from HandleRequests
+		to HandleRequests
+		trigger  setProximityPriorityParameter ? proximityPriority
+		action proximityPriorityParam ! proximityPriority
+	}
+	transition HandleGetParameterReceiveSetProximityPriorityParameter {
+		from HandleRequests
+		to HandleRequests
+		trigger  getProximityPriorityParameter
+		action proximityPriorityParameter ! proximityPriority
+	}
+
+	transition HandleSetParameterReceiveSetDetermineLocationPriorityParameter {
+		from HandleRequests
+		to HandleRequests
+		trigger  setDetermineLocationPriorityParameter ? determineLocationPriority
+		action determineLocationPriorityParam ! determineLocationPriority
+	}
+	transition HandleGetParameterReceiveSetDetermineLocationPriorityParameter {
+		from HandleRequests
+		to HandleRequests
+		trigger  getDetermineLocationPriorityParameter
+		action determineLocationPriorityParameter ! determineLocationPriority
+	}
+	
+	transition HandleValueQueriesReceivegetProximityEnvPointsValue {
+		from HandleRequests
+		to HandleRequests
+		trigger getProximityEnvPointsValue 
+	  	action proximityEnvPointsValue ! 	( currentProximityEnvPoints [1] )    
+	}
+	
+	transition HandleValueQueriesReceivegetMoveToLocationVelocityValue {
+		from HandleRequests
+		to HandleRequests
+		trigger getMoveToLocationVelocityValue 
+	  	action moveToLocationVelocityValue ! 	( currentMoveToLocationVelocity [1] )   
+	 
+	}
+	
+	transition HandleValueQueriesReceivegetDetermineLocationLocationValue {
+		from HandleRequests
+		to HandleRequests
+		trigger getDetermineLocationLocationValue 
+	  	action determineLocationLocationValue ! 	( currentDetermineLocationLocation [1] )   
+	 
+	}
+
+	transition HandleStopMonitorReceive {
+		from HandleRequests
+		to HandleRequests
+		trigger stopEventMonitor ? monitorRequest
+		action currentlyActiveMonitors = diff ( currentlyActiveMonitors , { monitorRequest } )
+	}
+
+}
+

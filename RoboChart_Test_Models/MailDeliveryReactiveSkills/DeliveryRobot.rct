@@ -1,0 +1,9 @@
+package maildelivery::deliveryrobot 
+
+robotic platform DeliveryRobot {
+	uses maildelivery::types::PointCloud 
+	uses maildelivery::types::ColourPointCloud 
+	provides maildelivery::types::Base 
+	provides maildelivery::types::Audio 
+	}
+

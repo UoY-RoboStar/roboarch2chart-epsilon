@@ -1,0 +1,6 @@
+package three_empty_layers import three_empty_layers::control::* import three_empty_layers::executive::* import three_empty_layers::planning::* module ThreeEmptyLayers {
+	cref Planning = Planning
+	cref Executive = Executive
+	cref Control = Control
+}
+

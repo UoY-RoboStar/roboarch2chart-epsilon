@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="ASCII"?>
+<robochart:RCPackage xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:robochart="http://www.robocalc.circus/RoboChart">
+  <controllers name="Control"/>
+  <controllers name="Executive"/>
+  <controllers name="Planning"/>
+  <modules name="ThreeEmptyLayers">
+    <nodes xsi:type="robochart:ControllerRef" name="Planning" ref="//@controllers.2"/>
+    <nodes xsi:type="robochart:ControllerRef" name="Executive" ref="//@controllers.1"/>
+    <nodes xsi:type="robochart:ControllerRef" name="Control" ref="//@controllers.0"/>
+  </modules>
+</robochart:RCPackage>

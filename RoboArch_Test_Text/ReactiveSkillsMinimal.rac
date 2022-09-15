@@ -1,0 +1,28 @@
+system ReactiveSkillsMinimal 
+
+type Velocity
+datatype Velocities {linear:Velocity angular:Velocity} 
+
+
+layer Ctl : ControlLayer { 		 
+		pattern =  ReactiveSkills;   
+		
+		skills =  
+		
+			dskill Move { 
+				    inputs = vIn:Velocities ;  
+			},
+						
+			async cskill RandomMove {
+				    outputs= vOut:Velocities;
+			} ;
+			
+			
+		connections =   RandomMove  on vOut to Move on vIn ;
+	
+		
+
+		
+} ;
+
+

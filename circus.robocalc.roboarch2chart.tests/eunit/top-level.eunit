@@ -1,0 +1,102 @@
+/********************************************************************************
+ * Copyright (c) 2022 University of York and others
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0.
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ *
+ * Contributors:
+ *   William Barnett - initial definition
+ ********************************************************************************/
+
+@model
+operation loadTopLevelModels() {
+  runTarget("runmodelmanagement.load-robochart-lib");
+  runTarget("load-three-empty-layers-models");
+  runTarget("load-empty-control-layer-models");
+}
+
+@After
+operation cleanup(){
+		
+		currentRuleName = null;
+		currentElementName = null;
+		currentElementType = null;
+		currentRuleOutput = null;
+		
+		"Global epsilon variables cleared.".println();
+}
+
+
+$onlyWith Map{ "RoboArch" = "RA_ThreeEmptyLayers", "Expected_RoboChart" = "RC_ThreeEmptyLayers", "RoboChart"="GenRC_ThreeEmptyLayers",  "RoboChartLib_Core" = "RoboChartLib_Core", "RoboChartLib_Set" = "RoboChartLib_Set", "RoboChartLib_Sequence" = "RoboChartLib_Sequence", "RoboChartLib_Relation" = "RoboChartLib_Relation", "RoboChartLib_Function" = "RoboChartLib_Function"}
+$onlyWith Map{ "RoboArch" = "RA_EmptyControlLayer", "Expected_RoboChart" = "RC_EmptyControlLayer", "RoboChart"="GenRC_EmptyControlLayer",    "RoboChartLib_Core" = "RoboChartLib_Core", "RoboChartLib_Set" = "RoboChartLib_Set", "RoboChartLib_Sequence" = "RoboChartLib_Sequence", "RoboChartLib_Relation" = "RoboChartLib_Relation", "RoboChartLib_Function" = "RoboChartLib_Function"}
+@test
+operation TransformedModelMatchesExpected() {
+  runTarget("runmodelmanagement.ra2rc");
+  runTarget("runmodelmanagement.rc2txt");
+  
+  Expected_RoboChart.asString().println();
+  //assertEqualModels("Expected_RoboChart", "RoboChart");
+}
+
+$onlyWith Map{ "RoboArch" = "RA_ThreeEmptyLayers", "RoboChart"="GenRC_ThreeEmptyLayers",    "RoboChartLib_Core" = "RoboChartLib_Core", "RoboChartLib_Set" = "RoboChartLib_Set", "RoboChartLib_Sequence" = "RoboChartLib_Sequence", "RoboChartLib_Relation" = "RoboChartLib_Relation", "RoboChartLib_Function" = "RoboChartLib_Function"}
+@test
+operation EmptyControlLayerToController() {
+  	currentRuleName = "EmptyControlLayerToController";
+  	currentElementName =  "Control";
+  	currentElementType = RoboArch!ControlLayer;
+  	
+ 	runTarget("testmodelmanagement.test-rule-ra2rc");
+ 	
+ 	/*Check
+	 	- An empty controller is created with name Control
+     */
+     
+    var foundControllers = currentRuleOutput.flatten().select( e | e.isTypeOf(RoboChart!ControllerRef) );
+	foundControllers.asString().println();
+ 	var controlLayer = foundControllers.select( e | e.ref.name = "Control");
+ 	assertTrue( controlLayer.size().asString(), controlLayer.size() = 1);
+ 	
+}
+
+$onlyWith Map{ "RoboArch" = "RA_ThreeEmptyLayers", "RoboChart"="GenRC_ThreeEmptyLayers",    "RoboChartLib_Core" = "RoboChartLib_Core", "RoboChartLib_Set" = "RoboChartLib_Set", "RoboChartLib_Sequence" = "RoboChartLib_Sequence", "RoboChartLib_Relation" = "RoboChartLib_Relation", "RoboChartLib_Function" = "RoboChartLib_Function"}
+@test
+operation EmptyExecutiveLayerToController() {
+  	currentRuleName = "EmptyExecutiveLayerToController";
+  	currentElementName =  "Executive";
+  	currentElementType = RoboArch!ExecutiveLayer;
+  	
+ 	runTarget("testmodelmanagement.test-rule-ra2rc");
+ 	
+ 	/*Check
+	 	- An empty controller is created with name Executive
+     */
+     
+    var foundControllers = currentRuleOutput.flatten().select( e | e.isTypeOf(RoboChart!ControllerRef) );
+
+ 	var executiveLayer = foundControllers.select( e | e.ref.name = "Executive");
+ 	assertTrue( executiveLayer.size().asString(), executiveLayer.size() = 1);
+ 	
+}
+
+$onlyWith Map{ "RoboArch" = "RA_ThreeEmptyLayers", "RoboChart"="GenRC_ThreeEmptyLayers",    "RoboChartLib_Core" = "RoboChartLib_Core", "RoboChartLib_Set" = "RoboChartLib_Set", "RoboChartLib_Sequence" = "RoboChartLib_Sequence", "RoboChartLib_Relation" = "RoboChartLib_Relation", "RoboChartLib_Function" = "RoboChartLib_Function"}
+@test
+operation EmptyPlanningLayerToController() {
+  	currentRuleName = "EmptyPlanningLayerToController";
+  	currentElementName =  "Planning";
+  	currentElementType = RoboArch!PlanningLayer;
+  	
+ 	runTarget("testmodelmanagement.test-rule-ra2rc");
+ 	
+ 	/*Check
+	 	- An empty controller is created with name Planning
+     */
+     
+    var foundControllers = currentRuleOutput.flatten().select( e | e.isTypeOf(RoboChart!ControllerRef) );
+
+ 	var planningLayer = foundControllers.select( e | e.ref.name = "Planning");
+ 	assertTrue( planningLayer.size().asString(), planningLayer.size() = 1);
+ 	
+}

@@ -1,0 +1,74 @@
+<!-- 
+ ******************************************************************************
+ * Copyright (c) 2022 University of York and others
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0.
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ *
+ * Contributors:
+ *   William Barnett - initial definition
+ ****************************************************************************** -->
+
+	<project name="runmodelmanagement">
+
+
+	<!-- MODEL MANAGEMENT TARGETS -->
+
+	
+	<target name="load-robochart-lib" description="Load the RoboChart standard libraries.">
+		
+	<robochart2sim.load name="RoboChartLib_Core"
+					modeluri="platform:/plugin/circus.robocalc.robochart.textual/lib/robochart/core.rct"
+					metamodeluri="http://www.robocalc.circus/RoboChart"
+					read="true" store="false" expand="true" failonerrors="true" cached="false" />
+
+	<robochart2sim.load name="RoboChartLib_Set"
+					modeluri="platform:/plugin/circus.robocalc.robochart.textual/lib/robochart/set_toolkit.rct"
+					metamodeluri="http://www.robocalc.circus/RoboChart"
+					read="true" store="false" expand="true" failonerrors="true" cached="false" />
+		
+	<robochart2sim.load name="RoboChartLib_Sequence"
+					modeluri="platform:/plugin/circus.robocalc.robochart.textual/lib/robochart/sequence_toolkit.rct"
+					metamodeluri="http://www.robocalc.circus/RoboChart"
+					read="true" store="false" expand="true" failonerrors="true" cached="false" />
+
+	<robochart2sim.load name="RoboChartLib_Relation"
+					modeluri="platform:/plugin/circus.robocalc.robochart.textual/lib/robochart/relation_toolkit.rct"
+					metamodeluri="http://www.robocalc.circus/RoboChart"
+					read="true" store="false" expand="true" failonerrors="true" cached="false" />
+		
+	<robochart2sim.load name="RoboChartLib_Function"
+					modeluri="platform:/plugin/circus.robocalc.robochart.textual/lib/robochart/function_toolkit.rct"
+					metamodeluri="http://www.robocalc.circus/RoboChart"
+					read="true" store="false" expand="true" failonerrors="true" cached="false" />
+	</target>
+	
+	
+	
+	<target name="ra2rc" description="Runs the RoboArch to RoboChart transformation rule.">
+		<epsilon.etl src="${erules.base.location}/erules/RA2RC.etl">
+			<model ref="RoboArch"/>
+			<model ref="RoboChart"/>
+			<model ref="RoboChartLib_Core"/>
+			<model ref="RoboChartLib_Set"/>
+			<model ref="RoboChartLib_Sequence"/>
+			<model ref="RoboChartLib_Relation"/>
+			<model ref="RoboChartLib_Function"/>
+		</epsilon.etl>
+	</target>
+	
+	
+	<target name="rc2txt" description="Runs the RoboChart to Text generator.">
+		
+		<epsilon.egl src="${rc2text.base.location}/scripts/robochart2text.egx">
+			<model ref="RoboChart"/>
+			<parameter name="baseOuputLocation" value="${generated.text.location}"/>
+			<parameter name="modelNameAsSubDir" value="true"/>
+		</epsilon.egl>
+	</target>
+
+	
+</project>

@@ -1,0 +1,112 @@
+package maildelivery::ctl::determinelocation
+
+import maildelivery::types::*
+
+
+stm DetermineLocation {
+
+
+	uses IDetermineLocation
+
+
+
+
+	var  priorityParam : nat , image : PointImage , location : Coordinate , priorityParamInitialised : boolean = 	false
+
+
+
+	initial Initial
+
+	 state Initialise {
+	}
+
+	 state Deactivated {
+	}
+
+	 state Startup {
+	}
+
+	 state Ready {
+	}
+
+	 state ComputeOutputs {
+	}
+
+	 state Cleanup {
+	}
+
+	transition InitialToInitialise {
+		from Initial
+		to Initialise
+	}
+
+	transition InitialiseToDeactivated {
+		from Initialise
+		to Deactivated
+		condition 	priorityParamInitialised
+
+	}
+
+	transition DeactivatedToStartup {
+		from Deactivated
+		to Startup
+		trigger activateDetermineLocation
+	}
+
+	transition StartupToReady {
+		from Startup
+		to Ready
+	}
+
+	transition ReadyToComputeoutputs {
+		from Ready
+		to ComputeOutputs
+		trigger executeDetermineLocation
+	}
+
+	transition ComputeoutputsToReady {
+		from ComputeOutputs
+		to Ready
+	  	action completeDetermineLocation
+	}
+
+	transition ReadyToCleanup {
+		from Ready
+		to Cleanup
+		trigger deactivateDetermineLocation
+	}
+
+	transition CleanupToDeactivated {
+		from Cleanup
+		to Deactivated
+	}
+
+	transition ReadyReceiveImage {
+		from Ready
+		to Ready
+		trigger determineLocationImage ? image
+	}
+
+
+	transition InitialiseReceivePriorityParam {
+		from Initialise
+		to Initialise
+		trigger determineLocationPriorityParam ? priorityParam
+	  	action priorityParamInitialised = 	true
+
+	}
+
+	transition DeactivatedReceivePriorityParam {
+		from Deactivated
+		to Deactivated
+		trigger determineLocationPriorityParam ? priorityParam
+	}
+
+	transition ReadyReceivePriorityParam {
+		from Ready
+		to Ready
+		trigger determineLocationPriorityParam ? priorityParam
+	}
+
+
+}

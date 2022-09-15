@@ -1,0 +1,12 @@
+
+<project>
+	<!-- <ant antfile="Test-ModelManagement.xml" target="clean"/> -->
+	
+	<ant antfile="Test-TopLevel.xml" target="run-toplevel-tests"/> 
+	<ant antfile="Test-ReactiveSkills.xml" target="run-reactiveskills-tests"/>
+	
+	<!-- There are currently issues with the environment invoking junit via ant, for now run via eclipse
+	<ant antfile="Test-ValidateGeneratedRoboChartText.xml" target="run-robochartvalidationtests"/> -->
+	
+	
+</project>

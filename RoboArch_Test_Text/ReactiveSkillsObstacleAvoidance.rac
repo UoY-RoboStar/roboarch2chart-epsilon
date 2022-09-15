@@ -1,0 +1,34 @@
+system ReactiveSkillsObstacleAvoidance 
+
+type Velocity
+type Length
+datatype Velocities {linear:Velocity angular:Velocity}  
+
+layer Control: ControlLayer { 
+		pattern = ReactiveSkills ;
+		      
+		skills=  
+		
+			dskill Move {  
+				    inputs= vIn:Velocities;
+			},
+			
+			dskill Proximity { 
+				    outputs= gap:Length;
+			},
+						
+			cskill Explore { 
+					parameters=	maxSpeed: Velocity;		
+						
+					inputs= obstacleDistance: Length;
+					
+				    outputs= vOut:Velocities;
+			} ;
+			
+		connections=   
+			Explore on vOut to Move on vIn, 
+			Proximity on gap to Explore on obstacleDistance; 
+		
+
+};
+

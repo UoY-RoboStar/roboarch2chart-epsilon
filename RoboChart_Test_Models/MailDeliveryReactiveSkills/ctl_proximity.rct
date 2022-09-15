@@ -1,0 +1,139 @@
+package maildelivery::ctl::proximity
+
+import maildelivery::types::*
+
+
+stm Proximity {
+
+
+	uses IProximity
+	event platformEnvPoints: Scan
+
+
+	var priorityParam : nat , envPoints : Scan , priorityParamInitialised : boolean = 	false
+	 , envPointsSenseReceived : boolean = 	false
+
+
+	initial Initial
+
+	 state Initialise {
+	}
+
+	 state Deactivated {
+	}
+
+	 state Startup {
+	}
+
+	 state Ready {
+	}
+
+	 state HandleActuationCommands {
+	}
+
+	 state HandleSensorData {
+	}
+
+	 state Cleanup {
+	}
+
+	transition InitialToInitialise {
+		from Initial
+		to Initialise
+	}
+
+	transition InitialiseToDeactivated {
+		from Initialise
+		to Deactivated
+		condition 	priorityParamInitialised
+
+	}
+
+	transition DeactivatedToStartup {
+		from Deactivated
+		to Startup
+		trigger activateProximity
+	}
+
+	transition StartupToReady {
+		from Startup
+		to Ready
+	}
+
+	transition ReadyToHandleActuationCommands {
+		from Ready
+		to HandleActuationCommands
+		trigger executeProximity
+	}
+
+	transition HandleActuationCommandsToHandleSensorData {
+		from HandleActuationCommands
+		to HandleSensorData
+	condition envPointsSenseReceived
+	}
+
+	transition HandleSensorDataToReady {
+		from HandleSensorData
+		to Ready
+		condition 	not envPointsSenseReceived
+
+	  	action completeProximity
+	}
+
+	transition ReadyToCleanup {
+		from Ready
+		to Cleanup
+		trigger deactivateProximity
+	}
+
+	transition CleanupToDeactivated {
+		from Cleanup
+		to Deactivated
+	}
+
+	transition ReadyReceiveEnvPoints {
+		from Ready
+		to Ready
+		trigger platformEnvPoints ? envPoints
+	  	action envPointsSenseReceived = 	true
+
+	}
+
+	transition HandleSensorDataReceivegap {
+		from HandleSensorData
+		to HandleSensorData
+		condition 	envPointsSenseReceived
+
+	  	action proximityEnvPoints ! 	(| envPoints, priorityParam |)
+	 ; envPointsSenseReceived = 	false
+
+	}
+
+	transition InitialiseReceivePriorityParam {
+		from Initialise
+		to Initialise
+		trigger proximityPriorityParam ? priorityParam
+	  	action priorityParamInitialised = 	true
+
+	}
+
+	transition DeactivatedReceivePriorityParam {
+		from Deactivated
+		to Deactivated
+		trigger proximityPriorityParam ? priorityParam
+	}
+
+	transition ReadyReceivePriorityParam {
+		from Ready
+		to Ready
+		trigger proximityPriorityParam ? priorityParam
+	}
+
+
+transition t0 {
+		from HandleActuationCommands
+		to Ready
+		condition not envPointsSenseReceived
+		action completeProximity
+	}
+}

@@ -1,0 +1,1191 @@
+/********************************************************************************
+ * Copyright (c) 2022 University of York and others
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0.
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ *
+ * Contributors:
+ *   William Barnett - initial definition
+ ********************************************************************************/
+
+import "../../common/Common.eol";
+import "../../common/RA2RC-Common.eol";
+import "../../common/RA2RC-Functions.eol";
+import "../../common/RA2RC-ReactiveSkills.eol";
+import "../../common/RoboChart.eol";
+
+ operation SkillsManagerBaseVariables(): Set(RoboChart!Variable) {
+ 	printDebug("SkillsManagerBaseVariables");
+ 	var smbvs = Set{};
+
+ 	var name;
+ 	var type;
+
+ 	name = SkillsManagerVarCurrentActiveSkillsName();
+ 	type = CreateRCSet( ref(SkillsEnumName(), RoboChart!Enumeration) );
+ 	smbvs.add( CreateRCVariable( name, type ) );
+
+  	name = SkillsManagerVarActivationRequestName();
+ 	type = ref(SkillsEnumName(), RoboChart!Enumeration);
+ 	smbvs.add( CreateRCVariable( name, type ) );
+
+  	name = SkillsManagerVarExecutingSkillName();
+ 	type = ref(SkillsEnumName(), RoboChart!Enumeration);
+ 	smbvs.add( CreateRCVariable( name, type ) );
+ 	
+  	name = SkillsManagerVarCurrentActiveMonitorsName();
+ 	type = CreateRCSet( ref(EventsEnumName(), RoboChart!Enumeration) );
+ 	smbvs.add( CreateRCVariable( name, type ) );
+ 	
+   	name = SkillsManagerVarMonitorRequestName();
+ 	type = ref(EventsEnumName(), RoboChart!Enumeration);
+ 	smbvs.add( CreateRCVariable( name, type ) );
+
+  	name = SkillsManagerVarUpdateRecordCompleteName();
+ 	type = ref("boolean", RoboChartLib_Core!PrimitiveType);
+ 	smbvs.add( CreateRCVariable( name, type ) );
+
+  	name = SkillsManagerVarCycleSkillsName();
+ 	type = CreateRCSeq( ref(SkillsEnumName(), RoboChart!Enumeration) );
+ 	smbvs.add( CreateRCVariable( name, type ) );
+
+  	name = SkillsManagerVarNextCycleSkillsName();
+ 	type = CreateRCSeq( ref(SkillsEnumName(), RoboChart!Enumeration) );
+ 	smbvs.add( CreateRCVariable( name, type ) );
+
+ 	return smbvs;
+ }
+
+
+
+ operation SkillsManagerNewSkillInputFlagVariables( skls: Set(RoboArch!Skill) ): Set(RoboChart!Variable) {
+ 	printDebug("SkillsManagerNewSkillInputFlagVariables");
+ 	var smifvs = Set{};
+
+ 	var name;
+ 	var type;
+
+ 	for (sk: RoboArch!CSkill in skls) {
+
+ 		for (inp: RoboArch!Variable in sk.inputs) {
+		 	name = SkillsManagerNewInputFlagName(sk.name, inp.name);
+		 	type = ref("boolean", RoboChartLib_Core!PrimitiveType);
+		 	smifvs.add( CreateRCVariable( name, type ) );
+		 }
+
+ 		for (otp: RoboArch!Variable in sk.outputs) {
+		 	name = SkillsManagerNewInputFlagName(sk.name, otp.name);
+		 	type = ref("boolean", RoboChartLib_Core!PrimitiveType);
+		 	smifvs.add( CreateRCVariable( name, type ) );
+		 }
+ 	}
+
+  	for (sk: RoboArch!DSkill in skls) {
+ 		for (act: RoboArch!Variable in sk.inputs) {
+		 	name = SkillsManagerNewInputFlagName(sk.name, act.name);
+		 	type = ref("boolean", RoboChartLib_Core!PrimitiveType);
+		 	smifvs.add( CreateRCVariable( name, type ) );
+		 }
+	}
+
+  	return smifvs;
+ }
+
+
+  operation SkillsManagerParameterVariables( skls: Set(RoboArch!Skill) ): Set(RoboChart!Variable) {
+  	printDebug("SkillsManagerParameterVariables");
+ 	var smpvs = Set{};
+
+ 	var name;
+ 	var type;
+
+ 	for (sk: RoboArch!Skill in skls) {
+ 	
+ 		for (pm: RoboArch!Variable in sk.parameters ) {
+ 		
+	 		name = SkillsManagerVarParameterName(sk.name, pm.name);
+	 		type = pm.type.equivalent();
+	 		smpvs.add( CreateRCVariable( name, type ) );
+ 		}
+ 	}
+
+ 	return smpvs;
+ }
+
+ operation SkillsManagerInputOutputVariables( skls: Set(RoboArch!Skill) ): Set(RoboChart!Variable){
+ 	printDebug("SkillsManagerInputOutputVariables");
+ 	var smiovs = Set {};
+
+  	var name;
+ 	var type;
+
+ 	for (sk: RoboArch!CSkill in skls) {
+
+ 		for (inp: RoboArch!Variable in sk.inputs) {
+ 			printDebug("eq " + inp.type.asString() );
+		 	name = SkillsManagerInputOutputVariableName(sk.name, inp.name);
+		 	type =  CreateRCProduct( Sequence{inp.type.equivalent().clone() , ref("nat", RoboChartLib_Core!PrimitiveType) } );
+		 	smiovs.add( CreateRCVariable( name, type ) );
+		 }
+
+ 		for (otp: RoboArch!Variable in sk.outputs) {
+		 	name = SkillsManagerInputOutputVariableName(sk.name, otp.name);
+		 	type = CreateRCProduct( Sequence{otp.type.equivalent().clone(), ref("nat", RoboChartLib_Core!PrimitiveType) } );
+		 	smiovs.add( CreateRCVariable( name, type ) );
+		 }
+ 	}
+
+  	for (sk: RoboArch!DSkill in skls) {
+ 		for (act: RoboArch!Variable in sk.inputs) {
+		 	name = SkillsManagerInputOutputVariableName(sk.name, act.name);
+		 	type = CreateRCProduct( Sequence{act.type.equivalent().clone(), ref("nat", RoboChartLib_Core!PrimitiveType) } );
+		 	smiovs.add( CreateRCVariable( name, type ) );
+		 }
+
+ 		for (sdt: RoboArch!Variable in sk.outputs) {
+		 	name = SkillsManagerInputOutputVariableName(sk.name, sdt.name);
+		 	type = CreateRCProduct( Sequence{sdt.type.equivalent().clone(), ref("nat", RoboChartLib_Core!PrimitiveType) } );
+		 	smiovs.add( CreateRCVariable( name, type ) );
+		 }
+	}
+
+
+ 	return smiovs;
+ }
+
+  operation SkillsManagerConstants(): Set(RoboChart!Variable) {
+  	printDebug("SkillsManagerConstants");
+ 	var smcs = Set{};
+
+ 	var name;
+ 	var type;
+
+ 	name = SkillsManagerConstRequestHandlingDelayName();
+ 	type = ref("nat", RoboChartLib_Core!PrimitiveType);
+ 	smcs.add( CreateRCVariable( name, type ) );
+
+ 	name = SkillsManagerConstAsyncSkillsName();
+ 	type = CreateRCSeq( ref("Skills", RoboChart!Enumeration) );
+ 	smcs.add( CreateRCVariable( name, type ) );
+
+ 	return smcs;
+ }
+
+ operation SkillsManagerPatternStates(skls: Set(RoboArch!Skill), scons: Set(RoboArch!SkillConnection), smons: Set(RoboArch!Monitor)): Set(RoboChart!State){
+ 	printDebug("SkillsManagerPatternStates");
+
+ 	/* The ordering doesn't matter however reuse of the RoboChart diagrams on regeneration of
+       the model is improved. */
+ 	var smps: Sequence(RoboChart!State);
+
+ 	var initialJunction = new RoboChart!Initial;
+	initialJunction.name = SkillsManagerInitialName();
+
+	smps.add( initialJunction );
+
+
+	//Initialise
+	var initialiseState = new RoboChart!State;
+	initialiseState.name = SkillsManagerInitialiseName();
+	initialiseState.actions.add( CreateRCEntryAction(SkillsManagerInitialiseStatements(skls)) );
+	smps.add( initialiseState );
+
+
+	//HandleRequests
+	var handleRequestsState = new RoboChart!State;
+	handleRequestsState.name = SkillsManagerHandleRequestsName();
+
+	smps.add( handleRequestsState );
+
+
+	//DoNextSkill
+	smps.add( SkillsManagerDoNextSkillState() );
+
+
+	//UpdateRecord
+	smps.add( SkillsManagerUpdateRecordState(skls, scons) );
+
+
+	//CheckMonitors
+	smps.add( SkillsManagerCheckMonitorsState(smons) );
+
+
+	//Cleanup
+	smps.add( SkillsManagerCleanupState() );
+
+	//Executing States
+	smps.addAll( SkillsManagerExecutingStates(skls) );
+
+ 	return smps.asSet();
+ }
+
+
+ operation SkillsManagerUpdateRecordState(skls: Set(RoboArch!Skill), scons: Set(RoboArch!SkillConnection)): RoboChart!State{
+	printDebug("SkillsManagerUpdateRecordState");
+	
+	var urstate = new RoboChart!State;
+	
+	// Where
+	var initialName = "UpdateRecordInitial";
+
+	urstate.name = SkillsManagerUpdateRecordName();
+	
+	/*
+     *   Actions
+     */
+	var entryAction = new RoboChart!Assignment;
+	entryAction.left =  ref(SkillsManagerVarUpdateRecordCompleteName(), RoboChart!Variable);
+	entryAction.right = CreateRCExpression(false);
+	urstate.actions.add( CreateRCEntryAction(entryAction) );
+	
+	/*
+     *   Nodes
+     */
+	
+	var initialJunction = new RoboChart!Initial;
+	initialJunction.name = initialName;
+	urstate.nodes.add( initialJunction );
+	
+	//SkillSelectJunction
+	var skillSelectJunction = new RoboChart!Junction;
+	skillSelectJunction.name = UpdateRecordSkillSelectJunctionName();
+	urstate.nodes.add( skillSelectJunction );
+	
+	//AddNextCycleSkills State
+	var addNextCycleSkillsState = UpdateRecordAddNextCycleSkillsComposite(skls);
+	urstate.nodes.add( addNextCycleSkillsState );
+	
+	//Final State
+	var finalState = new RoboChart!Final;
+	finalState.name = UpdateRecordFinalName();
+	urstate.nodes.add( finalState );
+	
+	
+	//UpdateValues States
+	var updateValuesStates: Set(RoboChart!State);
+	
+	for (sk: RoboArch!Skill in skls){
+		var newUpdateValuesState = new RoboChart!State;
+		
+		newUpdateValuesState.name =  UpdateRecordUpdateValuesName(sk.name);
+		
+		updateValuesStates.add(newUpdateValuesState);
+	}
+	
+	urstate.nodes.addAll(updateValuesStates);
+	
+	
+	/*
+     *   Transtions
+     */
+     
+     // Initial to SkillSelectJunction
+     var initialToSkillSelectJunctionTransition= new RoboChart!Transition;
+     initialToSkillSelectJunctionTransition.name = initialName + "To" + UpdateRecordSkillSelectJunctionName();
+     initialToSkillSelectJunctionTransition.source = initialJunction;
+     initialToSkillSelectJunctionTransition.target = skillSelectJunction;
+          
+     urstate.transitions.add(initialToSkillSelectJunctionTransition);
+     
+     
+     // AddNextCycleSkills to Final
+	 urstate.transitions.add( AddNextCycleSkillsToFinalTransition() );
+	
+     
+     // SkillUpdateValues
+     
+     var updateValueTransitions = Set{};
+     
+     for (sk: RoboArch!Skill in skls) {
+     	updateValueTransitions.addAll(  SkillUpdateValueTransitions(sk, scons) );
+     }
+
+     urstate.transitions.addAll( updateValueTransitions );
+	
+	return urstate;
+}
+
+ operation SkillsManagerDoNextSkillState(): RoboChart!State{
+ 	printDebug("SkillsManagerDoNextSkillState");
+ 	var dnstate = new RoboChart!State;
+ 	
+ 	dnstate.name = SkillsManagerDoNextSkillName();
+ 	
+ 	var executingSkillAssignment = new RoboChart!Assignment;
+ 	
+ 	executingSkillAssignment.left= ref(SkillsManagerVarExecutingSkillName(), RoboChart!Variable);
+ 	
+ 		var getNextSkillCall = new RoboChart!CallExp;
+    	getNextSkillCall.`function` = ref("head", RoboChartLib_Sequence!Function).createRefExp();
+    	getNextSkillCall.args = Sequence{ ref( SkillsManagerVarCycleSkillsName(), RoboChart!Variable).varRefToRefExp() };
+ 	executingSkillAssignment.right= getNextSkillCall;
+ 	
+ 	dnstate.actions.add( CreateRCEntryAction(executingSkillAssignment) );
+ 	
+ 	return dnstate;
+ }
+ 
+  operation SkillsManagerCheckMonitorsState( smons: Set(RoboArch!Monitor) ): RoboChart!State{
+  	printDebug("SkillsManagerCheckMonitorsState");
+  	
+  	var cmstate = new RoboChart!State;
+  	
+  	// Where
+  	var monitorConditionalStmt;
+  	
+  	if (smons.size() = 1) {
+  		monitorConditionalStmt = MonitorConditional( smons.unique() );
+  	
+  	} else if (smons.size > 1) {
+  		var conditionalStatements = smons.collect(m | MonitorConditional(m) );
+  		
+  		monitorConditionalStmt= CreateRCSeqStatement( conditionalStatements );
+  	}
+  	
+  	
+  	cmstate.name = SkillsManagerCheckMonitorsName();
+  	
+  	if(smons.size() > 0){
+  		cmstate.actions.add( CreateRCEntryAction(monitorConditionalStmt) );
+  		
+  	}else{
+  		//Empty
+  	}
+  	
+  	return cmstate;
+  }
+  
+ operation MonitorConditional(mon: RoboArch!Monitor): RoboChart!IfStmt {
+ 	printDebug("MonitorConditional");
+ 	
+ 	var cstmt = new RoboChart!IfStmt;
+ 	
+ 	// Where 
+ 	var monitorEnumExp = new RoboChart!EnumExp;
+ 	monitorEnumExp.type = ref(EventsEnumName(), RoboChart!Enumeration).ref;
+ 	monitorEnumExp.literal = ref( EventLiteralName(mon.name), RoboChart!Literal).ref;
+ 	
+ 	
+ 	
+ 	
+ 		var andStmt = new RoboChart!And;
+ 			var inExp = new RoboChart!InExp;
+ 			inExp.member = monitorEnumExp;
+ 			inExp.set =  ref(SkillsManagerVarCurrentActiveMonitorsName(), RoboChart!Variable).varRefToRefExp();
+ 			
+ 		andStmt.left = inExp;
+ 		andStmt.right = mon.condition.equivalent();
+ 	
+ 	cstmt.expression = andStmt;
+ 	
+ 	
+ 	var outputEnumTrigger = new RoboChart!Trigger;
+ 	
+ 	outputEnumTrigger._type = RoboChart!TriggerType#OUTPUT;
+ 	
+ 	outputEnumTrigger.event = ref(MonitoredEventReturnName(), RoboChart!Event);
+ 	
+ 	outputEnumTrigger.value = monitorEnumExp.clone();
+ 	
+ 	cstmt.then = CreateRCSendEvent( outputEnumTrigger );
+ 	
+ 	return cstmt;
+ }
+
+ operation SkillsManagerCleanupState(): RoboChart!State{
+ 	printDebug("SkillsManagerCleanupState");
+ 	var custate = new RoboChart!State;
+ 	
+ 	// Where
+ 	var initCycleSkills = new RoboChart!Assignment;
+ 	initCycleSkills.left = ref(SkillsManagerVarCycleSkillsName(), RoboChart!Variable);
+ 	initCycleSkills.right =  ref(SkillsManagerVarNextCycleSkillsName(), RoboChart!Variable).varRefToRefExp(); 
+ 	
+ 	var clearNextCycleSkill = new RoboChart!Assignment;
+ 	clearNextCycleSkill.left = ref(SkillsManagerVarNextCycleSkillsName(), RoboChart!Variable);
+ 	clearNextCycleSkill.right = CreateRCSeqExp( Sequence{} );
+ 	
+ 	custate.name = SkillsManagerCleanupName();
+ 	
+ 	custate.actions.add( CreateRCEntryAction( CreateRCSeqStatement(Sequence{initCycleSkills, clearNextCycleSkill}) ) );
+ 	
+ 	return custate;
+ }
+
+ operation AddNextCycleSkillsToFinalTransition(): RoboChart!Transition{
+	printDebug("AddNextCycleSkillsToFinalTransition");
+	
+	var ancst = new RoboChart!Transition;
+     
+     ancst.name = UpdateRecordAddNextCycleSkillsName() + "To" + UpdateRecordFinalName();
+     
+     ancst.source = ref( UpdateRecordAddNextCycleSkillsName(), RoboChart!State );
+     
+     ancst.target = ref(UpdateRecordFinalName(), RoboChart!Final);
+	
+		var assignmentAction = new RoboChart!Assignment;
+		assignmentAction.left = ref(SkillsManagerVarUpdateRecordCompleteName(), RoboChart!Variable);
+		assignmentAction.right = CreateRCExpression(true);
+     ancst.action = assignmentAction;
+     
+     return ancst;
+}
+
+ operation UpdateRecordAddNextCycleSkillsComposite(skls: Set(RoboArch!Skill)): RoboChart!State{
+	printDebug("UpdateRecordAddNextCycleSkillsComposite");
+	
+	var ancs = new RoboChart!State;
+		
+	
+
+	// Where
+	var conditionalStatements = Sequence{};
+	
+	for(csk: RoboArch!CSkill in skls){	
+		if(not csk.`async`){
+			conditionalStatements.add( AddNextCycleSkillConditional(csk) );
+		}
+	} 
+	
+	/*
+     *   Name
+     */
+	ancs.name = UpdateRecordAddNextCycleSkillsName();
+	
+	/*
+     *   Actions
+     */
+	var action;
+	
+	if (conditionalStatements.size() >= 1){
+	
+		if (conditionalStatements.size() = 1){
+			action = conditionalStatements.unique();
+			
+		} else {
+			action = CreateRCSeqStatement(conditionalStatements);
+		}
+		
+		ancs.actions.add( CreateRCEntryAction(action) );
+	}
+	
+	
+		
+	return ancs;
+}
+
+
+ operation AddNextCycleSkillConditional(sk: RoboArch!CSkill): RoboChart!IfStmt{
+ 	printDebug("AddNextCycleSkillConditional");
+	
+	var ancs = new RoboChart!IfStmt;
+	
+	// Where
+	var skillInputsReceived = null;
+	
+	if( sk.inputs.size() > 1 ){
+		skillInputsReceived= AndExp( sk.inputs.collect(inp | ref(SkillsManagerNewInputFlagName(sk.name, inp.name), RoboChart!Variable).varRefToRefExp()) );
+	
+	} else {
+		skillInputsReceived = ref(SkillsManagerNewInputFlagName(sk.name, sk.inputs.unique().name ), RoboChart!Variable).varRefToRefExp() ;
+	}
+	
+	/*
+     *  Expression
+     */
+	
+	var left = skillInputsReceived;
+	var right = CreateRCParExp( AlreadyAddedCycleSkillsCheck(sk.name) );
+	
+	ancs.expression = CreateRCParExp( CreateRCAnd( left, right ) );
+	
+	/*
+     *   Then
+     */
+	var addSkillAssignments = Sequence{};
+	addSkillAssignments.add( AddSkillToCycleSkills(sk.name) );
+	addSkillAssignments.addAll( ClearSkillNewValueFlags(sk) );
+	
+	ancs.then = CreateRCParStmt( CreateRCSeqStatement( addSkillAssignments ) );
+	
+  return ancs ;
+ }
+
+
+operation AlreadyAddedCycleSkillsCheck(skill: String): RoboChart!Equals{
+	printDebug("AlreadyAddedCycleSkillsCheck");
+	
+	var aasc = new RoboChart!Equals;
+	
+	//Where
+	var skillEnum = new RoboChart!EnumExp;
+	skillEnum.type= ref(SkillsEnumName(), RoboChart!Enumeration).ref;
+	skillEnum.literal= ref(SkillLiteralName(skill), RoboChart!Literal).ref;
+	
+	var singletonSkillSet = CreateRCSetExp( Set{skillEnum} );
+	
+	/*
+     *   Left
+     */
+    var callFilter = new RoboChart!CallExp;
+    callFilter.`function` = ref("filter", RoboChartLib_Sequence!Function).createRefExp();
+    
+    callFilter.args = Sequence{ ref(SkillsManagerVarNextCycleSkillsName(), RoboChart!Variable).varRefToRefExp(),
+								singletonSkillSet };
+								
+	aasc.left = callFilter;
+	
+	
+	/*
+     *   Right
+     */
+	aasc.right = CreateRCSetExp(Sequence{});
+	
+	return aasc;
+}
+
+operation AddSkillToCycleSkills(skill: String): RoboChart!Assignment{
+	printDebug("AddSkillToCycleSkills");
+	
+	var ascs: new RoboChart!Assignment;
+	
+	//where
+	var skillEnum= new RoboChart!EnumExp;
+	skillEnum.type= ref(SkillsEnumName(), RoboChart!Enumeration).ref;
+	skillEnum.literal= ref(SkillLiteralName(skill), RoboChart!Literal).ref;
+	
+	var singletonSkillSeq = CreateRCSeqExp( Set{skillEnum} );
+	
+	
+	/*
+     *   Left
+     */
+     ascs.left =  ref(SkillsManagerVarNextCycleSkillsName(), RoboChart!Variable);
+     
+     
+	/*
+     *   Right
+     */
+    var callConcat = new RoboChart!CallExp;
+    
+    callConcat.`function` = ref("concat", RoboChartLib_Sequence!Function).createRefExp();
+    
+    callConcat.args = Sequence{ ref(SkillsManagerVarNextCycleSkillsName(), RoboChart!Variable).varRefToRefExp(),
+								singletonSkillSeq };
+								
+     ascs.right = callConcat;
+     
+     return ascs;
+}
+
+
+operation ClearSkillNewValueFlags(sk: RoboArch!CSkill): Set(RoboChart!Assignment) {
+	printDebug("ClearSkillNewValueFlags");
+	
+	var uvsts = Set{};
+	
+	for(inp: RoboArch!Variable in sk.inputs){
+		var newAssignment = new RoboChart!Assignment;
+		
+		newAssignment.left = ref( SkillsManagerNewInputFlagName(sk.name, inp.name), RoboChart!Variable );
+		newAssignment.right = CreateRCExpression(false);
+		
+		uvsts.add(newAssignment);
+	}
+	
+	return uvsts;
+}
+
+
+
+ operation SkillUpdateValueTransitions(sk: RoboArch!Skill, scons: Set(RoboArch!SkillConnection)): Set(RoboChart!Transitions){
+ 	printDebug("SkillUpdateValueTransitions");
+
+ 	var uvsts: Set(RoboChart!Transition)= Set{};
+ 	
+ 	
+ 	// Where
+ 	var receiveValueTransitions = null;
+ 	
+ 	if ( sk.isTypeOf(RoboArch!CSkill) ){
+ 	
+	 	receiveValueTransitions = Set{};
+	 	
+	 	for (op: RoboArch!Variable in sk.outputs){
+	 		receiveValueTransitions.add(
+	 			SkillUpdateValueReceiveTransition( sk.name, op.name, scons.select(cn | (cn.start=sk) and (cn.startOutput=op)) )
+	 		);
+	 	}
+	 	
+ 	
+ 	
+ 	} else if ( sk.isTypeOf(RoboArch!DSkill) ){
+ 		
+ 	 	receiveValueTransitions = Set{};
+	 	
+	 	for (sd: RoboArch!Variable in sk.outputs){
+	 		receiveValueTransitions.add(
+	 			SkillUpdateValueReceiveTransition( sk.name, sd.name, scons.select(cn | (cn.start=sk) and (cn.startOutput=sd)) )
+	 		);
+	 	}
+ 	} else {
+ 		receiveValueTransitions = Set{};
+ 	}
+ 	
+ 	
+ 	
+ 	uvsts.addAll( SkillUpdateValueToFromTransitions(sk.name) );
+ 	
+ 	uvsts.addAll(receiveValueTransitions);
+ 	
+ 
+  return uvsts;
+ }
+
+
+ operation SkillUpdateValueToFromTransitions(skill: String): Set(RoboChart!Transitions){
+ 	printDebug("SkillUpdateValueToFromTransitions");
+
+ 	var tfts: Set(RoboChart!Transition)= Set{};
+ 	
+ 	// From
+ 	var fromTransition = new RoboChart!Transition;
+ 	
+ 	fromTransition.name = "SkillSelectTo" + UpdateRecordUpdateValuesName(skill);
+ 	fromTransition.source= ref( UpdateRecordSkillSelectJunctionName(), RoboChart!Junction );
+ 	fromTransition.target= ref( UpdateRecordUpdateValuesName(skill), RoboChart!State );
+ 	
+ 		var fromCondition = new RoboChart!Equals;
+ 		fromCondition.left= ref( SkillsManagerVarExecutingSkillName(), RoboChart!Variable ).varRefToRefExp();
+ 			
+ 			var enum = new RoboChart!EnumExp;
+ 			enum.type  = ref( SkillsEnumName(), RoboChart!Enumeration ).ref ;
+ 			enum.literal = ref( SkillLiteralName(skill), RoboChart!Literal ).ref;
+ 		fromCondition.right= enum;
+ 		
+ 	fromTransition.condition= fromCondition;
+ 	
+ 	tfts.add(fromTransition);
+ 	
+ 	
+ 	//To
+ 	var toTransition = new RoboChart!Transition;
+ 	
+ 	toTransition.name =  UpdateRecordUpdateValuesName(skill) + "To" + UpdateRecordAddNextCycleSkillsName();
+ 	toTransition.source= ref( UpdateRecordUpdateValuesName(skill), RoboChart!State );
+ 	toTransition.target= ref( UpdateRecordAddNextCycleSkillsName(), RoboChart!State );
+ 	
+ 		var toTrigger = new RoboChart!Trigger;
+ 		toTrigger._type= RoboChart!TriggerType#SIMPLE;
+ 		toTrigger.event = ref(SkillCompleteEventName(skill), RoboChart!Event);
+ 	toTransition.trigger= toTrigger;
+ 	
+ 	tfts.add(toTransition);
+ 
+  return tfts;
+ }
+
+
+$pre connections.forAll(c | (c.start.name = skill) and (c.startOutput.name = output) )
+operation SkillUpdateValueReceiveTransition(skill: String, output: String, connections: Set(SkillConnection)): RoboChart!Transition{
+	printDebug("SkillUpdateValueReceiveTransition");
+	
+	// Where
+	var thisSkillVar = SkillsManagerInputOutputVariableName(skill,output);
+	
+	var connectedSkillsUpdateAssignments = Set{};
+	
+	for (con: RoboArch!SkillConnection in connections) {
+		var updateAssignment = new RoboChart!Assignment;
+		
+		updateAssignment.left =  ref( SkillsManagerNewInputFlagName(con.end.name, con.endInput.name), RoboChart!Variable );
+		
+			var callUpdateValue = new RoboChart!CallExp;
+			callUpdateValue.`function` = ref( SkillsManagerFunctionUpdateValueName(), RoboChart!Function ).createRefExp();
+			
+			callUpdateValue.args = Sequence{ ref(SkillsManagerInputOutputVariableName(con.end.name, con.endInput.name), RoboChart!Variable).varRefToRefExp(),
+											 ref(thisSkillVar, RoboChart!Variable).varRefToRefExp() } ;
+											 
+		updateAssignment.right= callUpdateValue;
+		
+		connectedSkillsUpdateAssignments.Add(updateAssignment);
+	}
+
+	
+	var rcsvt = new RoboChart!Transition;
+	
+	rcsvt.name = "ValueReceive" + skill + output;
+	
+	rcsvt.source =  ref(UpdateRecordUpdateValuesName(skill), RoboChart!State)	;
+	
+	rcsvt.target = ref(UpdateRecordUpdateValuesName(skill), RoboChart!State)	;
+		
+		var transitionTrigger = new RoboChart!Trigger;
+		transitionTrigger._type = RoboChart!TriggerType#INPUT;
+		transitionTrigger.event = ref( SkillEventName(skill, output), RoboChart!Event);
+		transitionTrigger.parameter = ref(thisSkillVar, RoboChart!Variable).name;
+	rcsvt.trigger = transitionTrigger;
+	
+
+	if (connectedSkillsUpdateAssignments.size = 0) {
+		//empty
+		
+	} else if (connectedSkillsUpdateAssignments.size = 1) {
+		rcsvt.action = connectedSkillsUpdateAssignments.unique();
+	
+	} else {
+		rcsvt.action = CreateRCSeqStatement(connectedSkillsUpdateAssignments.asSequence());
+	}
+		
+
+	return rcsvt;
+}
+
+
+
+
+ operation SkillsManagerInitialiseStatements(skls: Set(RoboArch!Skill)): RoboChart!SeqStatement {
+ 	printDebug("SkillsManagerInitialiseStatements");
+
+ 	var initialiseSeq = new RoboChart!SeqStatement;
+ 	var left;
+ 	var right;
+
+ 	left = ref( SkillsManagerVarCurrentActiveSkillsName() , RoboChart!Variable );
+ 	right = CreateRCSetExp( Set{} );
+ 	initialiseSeq.statements.add( CreateRCAssignment(left, right) );
+
+  	left = ref( SkillsManagerVarCycleSkillsName() , RoboChart!Variable );
+ 	right = CreateRCSeqExp( Sequence{} );
+ 	initialiseSeq.statements.add( CreateRCAssignment(left, right) );
+
+  	left = ref( SkillsManagerVarNextCycleSkillsName() , RoboChart!Variable );
+ 	right = CreateRCSeqExp( Sequence{} );
+ 	initialiseSeq.statements.add( CreateRCAssignment(left, right) );
+
+	var inputFlagStatements: Sequence(RoboChart!Statements);
+
+
+	for(sk: RoboArch!CSkill in skls) {
+		for(inp in sk.inputs){
+			left = ref( SkillsManagerNewInputFlagName(sk.name, inp.name), RoboChart!Variable);
+			right = CreateRCExpression(false);
+			inputFlagStatements.add( CreateRCAssignment(left, right) );
+		}
+	}
+
+	for(sk: RoboArch!DSkill in skls){
+		for(act in sk.inputs){
+			left = ref( SkillsManagerNewInputFlagName(sk.name, act.name), RoboChart!Variable);
+			right = CreateRCExpression(false);
+			inputFlagStatements.add( CreateRCAssignment(left, right) );
+		}
+	}
+
+	initialiseSeq.statements.addAll(inputFlagStatements);
+
+	initialiseSeq.statements.add( CreateRCClockReset( ref(SkillsManagerClockRequestHandlingName(), RoboChart!Clock) ) );
+
+ 	return initialiseSeq;
+ }
+
+
+  operation SkillsManagerExecutingStates(skls: Set(RoboArch!Skill)): Set(RoboChart!State){
+ 	printDebug("SkillsManagerExecutingStates");
+
+	//Executing Skills
+	var smes: Set(State);
+
+	for (s: RoboArch!Skill in skls) {
+		var executingSkillState = new RoboChart!State;
+
+		executingSkillState.name = SkillsManagerExecutingSkillName(s.name);
+
+		smes.add(executingSkillState);
+	}
+
+ 	return smes;
+ }
+
+ operation SkillsManagerPatternTransitions(skls: Set(RoboArch!Skill)): Set(RoboChart!Transition){
+ 	printDebug("SkillsManagerPatternTransitions");
+
+
+ 	var smpt : Set(RoboChart!Transition);
+
+ 	var initialToInitialise = new RoboChart!Transition;
+	initialToInitialise.name = SkillsManagerInitialName() + "To" + SkillsManagerInitialiseName();
+	initialToInitialise.source = ref( SkillsManagerInitialName(), RoboChart!Initial);
+	initialToInitialise.target = ref( SkillsManagerInitialiseName(), RoboChart!State);
+	smpt.add( initialToInitialise );
+
+	var initialiseToHandleRequests = new RoboChart!Transition; 
+	initialiseToHandleRequests.name = SkillsManagerInitialiseName() + "To" + SkillsManagerHandleRequestsName();
+	initialiseToHandleRequests.source = ref( SkillsManagerInitialiseName(), RoboChart!State);
+	initialiseToHandleRequests.target = ref( SkillsManagerHandleRequestsName(), RoboChart!State);
+	smpt.add( initialiseToHandleRequests );
+
+
+	var handleRequestsToDoNextSkill = new RoboChart!Transition;
+	handleRequestsToDoNextSkill.name = SkillsManagerHandleRequestsName() + "To" + SkillsManagerDoNextSkillName();
+	handleRequestsToDoNextSkill.source = ref( SkillsManagerHandleRequestsName(), RoboChart!State);
+	handleRequestsToDoNextSkill.target = ref( SkillsManagerDoNextSkillName(), RoboChart!State);
+	handleRequestsToDoNextSkill.condition = SkillsManagerHandleTimeGuardExpression();
+	handleRequestsToDoNextSkill.action = SkillsManagerResetRequestClock();
+	smpt.add( handleRequestsToDoNextSkill );
+
+	var updateRecordToCheckMonitors = new RoboChart!Transition;
+	updateRecordToCheckMonitors.name = SkillsManagerUpdateRecordName() + "To" + SkillsManagerCheckMonitorsName();
+	updateRecordToCheckMonitors.source = ref( SkillsManagerUpdateRecordName(), RoboChart!State);
+	updateRecordToCheckMonitors.target = ref( SkillsManagerCheckMonitorsName(), RoboChart!State);
+	updateRecordToCheckMonitors.condition = ref( SkillsManagerVarUpdateRecordCompleteName(), RoboChart!Variable ).varRefToRefExp();
+	smpt.add( updateRecordToCheckMonitors );
+
+	var checkMonitorsToCleanup = new RoboChart!Transition;
+	checkMonitorsToCleanup.name = SkillsManagerCheckMonitorsName() + "To" + SkillsManagerCleanupName();
+	checkMonitorsToCleanup.source = ref( SkillsManagerCheckMonitorsName(), RoboChart!State);
+	checkMonitorsToCleanup.target = ref( SkillsManagerCleanupName(), RoboChart!State);
+		
+		var equalsCycleSkillsEmpty = new RoboChart!Equals;
+		equalsCycleSkillsEmpty.left = ref( SkillsManagerVarCycleSkillsName() , RoboChart!Variable ).varRefToRefExp();
+		equalsCycleSkillsEmpty.right = CreateRCSeqExp( Sequence{} );
+	checkMonitorsToCleanup.condition = equalsCycleSkillsEmpty;
+	
+	smpt.add( checkMonitorsToCleanup );
+
+	var checkMonitorsToDoNextSkill = new RoboChart!Transition;
+	checkMonitorsToDoNextSkill.name = SkillsManagerCheckMonitorsName() + "To" + SkillsManagerDoNextSkillName();
+	checkMonitorsToDoNextSkill.source = ref( SkillsManagerCheckMonitorsName(), RoboChart!State);
+	checkMonitorsToDoNextSkill.target = ref( SkillsManagerDoNextSkillName(), RoboChart!State);
+	
+		var cycleSkillsNotEmptyExp = new RoboChart!CallExp;
+		cycleSkillsNotEmptyExp.`function` = ref( "isNonEmpty", RoboChartLib_Sequence!Function ).createRefExp();
+		cycleSkillsNotEmptyExp.args.addAll( Sequence{ ref(SkillsManagerVarCycleSkillsName(), RoboChart!Variable ).varRefToRefExp()  } ) ;
+	checkMonitorsToDoNextSkill.condition = cycleSkillsNotEmptyExp;
+	
+		var cycleSkillsAssign = new RoboChart!Assignment;
+		cycleSkillsAssign.left = ref(SkillsManagerVarCycleSkillsName(), RoboChart!Variable );
+		
+ 			var cycleSkillsHead = new RoboChart!CallExp;
+			cycleSkillsHead.`function` = ref( "tail", RoboChartLib_Sequence!Function ).createRefExp();
+			cycleSkillsHead.args.addAll( Sequence{ ref(SkillsManagerVarCycleSkillsName(), RoboChart!Variable ).varRefToRefExp()  } ) ;
+		cycleSkillsAssign.right = cycleSkillsHead;
+	
+	checkMonitorsToDoNextSkill.action = cycleSkillsAssign;
+	
+	smpt.add( checkMonitorsToDoNextSkill );
+
+	var cleanupToHandleValueQueries = new RoboChart!Transition;
+	cleanupToHandleValueQueries.name = SkillsManagerCleanupName() + "To" + SkillsManagerHandleRequestsName();
+	cleanupToHandleValueQueries.source = ref( SkillsManagerCleanupName(), RoboChart!State);
+	cleanupToHandleValueQueries.target = ref( SkillsManagerHandleRequestsName(), RoboChart!State);
+	cleanupToHandleValueQueries.action = SkillsManagerResetRequestClock();
+	smpt.add( cleanupToHandleValueQueries );
+
+	//Executing Skills Transitions
+ 	smpt.addAll(SkillsManagerExecutingSkillsTransitions(skls) );
+
+ 	smpt.addAll(SkillsManagerHandlerTransitions(skls));
+
+ 	return smpt;
+ }
+
+ operation SkillsManagerResetRequestClock(): RoboChart!ClockReset {
+ 	return CreateRCClockReset( ref( SkillsManagerClockRequestHandlingName(), RoboChart!Clock ) );
+ }
+
+ operation SkillsManagerExecutingSkillsTransitions( skls:Set(RoboArch!Skill) ): Set(RoboChart!Transition){
+ 	printDebug("SkillsManagerExecutingSkillsTransitions");
+	var smest = Set{};
+
+	for (s: RoboArch!Skill in skls) {
+		//From - DoNextSkill
+		var executingSkillTransition = new RoboChart!Transition;
+		executingSkillTransition.name = SkillsManagerDoNextSkillName() + "To" + SkillsManagerExecutingSkillName(s.name);
+		executingSkillTransition.source = ref(SkillsManagerDoNextSkillName(), RoboChart!State);
+		executingSkillTransition.target = ref(SkillsManagerExecutingSkillName(s.name), RoboChart!State);
+		smest.add(executingSkillTransition);
+
+		//To - UpdateRecord
+		executingSkillTransition = new RoboChart!Transition;
+		executingSkillTransition.name = SkillsManagerExecutingSkillName(s.name) + "To" + SkillsManagerUpdateRecordName();
+		executingSkillTransition.source = ref(SkillsManagerExecutingSkillName(s.name), RoboChart!State );
+		executingSkillTransition.target = ref(SkillsManagerUpdateRecordName(), RoboChart!State);
+		smest.add(executingSkillTransition);
+	}
+
+	return smest;
+ }
+
+  operation SkillsManagerHandlerTransitions( skls:Set(RoboArch!Skill) ): Set(RoboChart!Transition){
+  	printDebug("SkillsManagerHandlerTransitions");
+
+	var smht = Set{};
+
+	smht.addAll( SkillsManagerValueQueryTransitions(skls) );
+
+	smht.add( SkillsManagerActiveSkillsTransition() );
+
+	smht.add( SkillsManagerActivationTransition() );
+
+	smht.add( SkillsManagerDeactivationTransition() );
+	
+	smht.addAll( SkillsManagerGetParameterTransitions(skls) );
+	
+	smht.addAll( SkillsManagerSetParameterTransitions(skls) );
+
+	return smht;
+ }
+
+
+  operation SkillsManagerValueQueryTransitions ( skls:Set(RoboArch!Skill) ): Set(RoboChart!Transition){
+  	printDebug("SkillsManagerValueQueryTransitions");
+
+	var vqts = Set{};
+
+	for ( sk: RoboArch!CSkill in skls ) {
+		// TODO add value inputs if necessary
+		//for (inp: RoboArch!Variable in sk.inputs) {
+		//	vqts.add( ValueQueryTransition(sk.name, inp.name) );
+		//}
+
+		for (otp: RoboArch!Variable in sk.outputs) {
+			vqts.add( ValueQueryTransition(sk.name, otp.name) );
+		}
+	}
+
+	for ( sk: RoboArch!DSkill in skls ) {
+		for (sdt: RoboArch!Variable in sk.outputs) {
+			vqts.add( ValueQueryTransition(sk.name, sdt.name) );
+		}
+
+		// TODO add value inputs if necessary
+		//for (act: RoboArch!Variable in sk.inputs) {
+		//	vqts.add( ValueQueryTransition(sk.name, act.name) );
+		//}
+	}
+
+	return vqts;
+ }
+
+  operation ValueQueryTransition( skill: String, io: String ): RoboChart!Transition {
+  	printDebug("ValueQueryTransition");
+
+	var vqt = new RoboChart!Transition;
+
+	vqt.name = "HandleValueQueriesReceive" + SkillValueRequestName(skill, io);
+
+	vqt.source = ref( SkillsManagerHandleRequestsName() , RoboChart!State );
+
+	vqt.target = ref( SkillsManagerHandleRequestsName() , RoboChart!State );
+
+		var transitionTrigger = new RoboChart!Trigger;
+		transitionTrigger._type = RoboChart!TriggerType#SIMPLE;
+		transitionTrigger.event = ref( SkillValueRequestName(skill, io), RoboChart!Event);
+
+	vqt.trigger = transitionTrigger;
+
+		var transitionAction = new RoboChart!Trigger;
+		transitionAction._type = RoboChart!TriggerType#OUTPUT;
+		transitionAction.event = ref( SkillValueReturnName(skill, io), RoboChart!Event);
+
+			var valueVariable = new RoboChart!ArrayExp;
+			valueVariable.value = CreateRCRefExp( ref(SkillsManagerInputOutputVariableName(skill, io), RoboChart!Variable ) );
+			valueVariable.parameters = Sequence{ CreateRCIntegerExp(1) };
+
+		transitionAction.value = CreateRCParExp( valueVariable );
+
+	vqt.action = CreateRCSendEvent(transitionAction);
+
+	return vqt;
+ }
+
+
+   operation SkillsManagerActiveSkillsTransition(): RoboChart!Transition{
+  	printDebug("SkillsManagerActiveSkillsTransition");
+
+	var ast = new RoboChart!Transition;
+
+	ast.name = "HandleActiveSkillsReceive";
+
+	ast.source = ref( SkillsManagerHandleRequestsName(), RoboChart!State);
+
+	ast.target = ref( SkillsManagerHandleRequestsName(), RoboChart!State);
+
+		var transitionTrigger = new RoboChart!Trigger;
+		transitionTrigger._type = RoboChart!TriggerType#SIMPLE;
+		transitionTrigger.event = ref(  ActiveSkillsRequestName(), RoboChart!Event);
+	ast.trigger = transitionTrigger;
+
+		var transitionAction = new RoboChart!Trigger;
+		transitionAction._type = RoboChart!TriggerType#OUTPUT;
+		transitionAction.event = ref(ActiveSkillsReturnName(), RoboChart!Event);
+		transitionAction.value = ref(SkillsManagerVarCurrentActiveSkillsName(), RoboChart!Variable).varRefToRefExp();
+	ast.action = CreateRCSendEvent( transitionAction );
+
+	return ast;
+ }
+
+
+   operation SkillsManagerActivationTransition(): RoboChart!Transition{
+  	printDebug("SkillsManagerActivationTransition");
+
+	var at = new RoboChart!Transition;
+
+	at.name = "HandleActivationReceive";
+
+	at.source = ref( SkillsManagerHandleRequestsName(), RoboChart!State);
+
+	at.target = ref( SkillsManagerHandleRequestsName(), RoboChart!State);
+
+		var transitionTrigger = new RoboChart!Trigger;
+		transitionTrigger._type = RoboChart!TriggerType#INPUT;
+		transitionTrigger.event = ref(ActivationRequestName(), RoboChart!Event);
+		transitionTrigger.parameter = ref(SkillsManagerVarActivationRequestName(), RoboChart!Variable).name;
+	at.trigger = transitionTrigger;
+
+		var transitionAction = new RoboChart!Trigger;
+		var left = ref(SkillsManagerVarCurrentActiveSkillsName(), RoboChart!Variable);
+			var actionValue = new RoboChart!CallExp;
+			actionValue.`function` = ref( "union", RoboChartLib_Set!Function ).createRefExp();
+			actionValue.args.addAll( Sequence{ ref(SkillsManagerVarCurrentActiveSkillsName(), RoboChart!Variable ).varRefToRefExp(),
+			                                   CreateRCSetExp( Set{ref(SkillsManagerVarActivationRequestName(), RoboChart!Variable).varRefToRefExp() } ) }
+			                            );
+
+		var right = actionValue;
+		transitionAction._type = RoboChart!TriggerType#OUTPUT;
+		transitionAction.event = ref(ActiveSkillsReturnName(), RoboChart!Event);
+		transitionAction.value = ref(SkillsManagerVarCurrentActiveSkillsName(), RoboChart!Variable).varRefToRefExp();
+	at.action = CreateRCAssignment(left, right) ;
+
+	return at;
+ }
+
+   operation SkillsManagerDeactivationTransition(): RoboChart!Transition{
+  	printDebug("SkillsManagerDeactivationTransition");
+
+	var dt = new RoboChart!Transition;
+
+	dt.name = "HandleDeactivationReceive";
+
+	dt.source = ref( SkillsManagerHandleRequestsName(), RoboChart!State);
+
+	dt.target = ref( SkillsManagerHandleRequestsName(), RoboChart!State);
+
+		var transitionTrigger = new RoboChart!Trigger;
+		transitionTrigger._type = RoboChart!TriggerType#INPUT;
+		transitionTrigger.event = ref(DeactivationRequestName(), RoboChart!Event);
+		transitionTrigger.parameter = ref(SkillsManagerVarActivationRequestName(), RoboChart!Variable).name;
+	dt.trigger = transitionTrigger;
+
+		var transitionAction = new RoboChart!Trigger;
+		var left = ref(SkillsManagerVarCurrentActiveSkillsName(), RoboChart!Variable);
+			var actionValue = new RoboChart!CallExp;
+			actionValue.`function` = ref( "diff", RoboChartLib_Set!Function ).createRefExp();
+			actionValue.args.addAll( Sequence{ ref(SkillsManagerVarCurrentActiveSkillsName(), RoboChart!Variable ).varRefToRefExp(),
+			                                   CreateRCSetExp( Set{ref(SkillsManagerVarActivationRequestName(), RoboChart!Variable).varRefToRefExp() } ) }
+			                            );
+
+		var right = actionValue;
+		transitionAction._type = RoboChart!TriggerType#OUTPUT;
+		transitionAction.event = ref(ActiveSkillsReturnName(), RoboChart!Event);
+		transitionAction.value = ref(SkillsManagerVarCurrentActiveSkillsName(), RoboChart!Variable).varRefToRefExp();
+	dt.action = CreateRCAssignment(left, right) ;
+
+	return dt;
+ }
+
+
+  operation SkillsManagerGetParameterTransitions( skls:Set(RoboArch!Skill) ): Set(RoboChart!Transition){
+  	printDebug("SkillsManagerGetParameterTransitions");
+
+	var gpts = Set{};
+
+	for ( sk: RoboArch!Skill in skls ) {
+
+		for (pm: RoboArch!Variable in sk.parameters) {
+			gpts.add( GetParameterTransition(sk.name, pm.name) );
+		}
+	}
+
+	return gpts;
+ }
+
+ operation GetParameterTransition( skill: String, param: String ): RoboChart!Transition {
+  	printDebug("GetParameterTransition");
+
+	var gpt = new RoboChart!Transition;
+
+	gpt.name = "HandleGetParameterReceive" + SkillParameterGetRequestName(skill, param);
+
+	gpt.source = ref( SkillsManagerHandleRequestsName() , RoboChart!State );
+
+	gpt.target = ref( SkillsManagerHandleRequestsName() , RoboChart!State );
+
+		var transitionTrigger = new RoboChart!Trigger;
+		transitionTrigger._type = RoboChart!TriggerType#SIMPLE;
+		transitionTrigger.event = ref( SkillParameterGetRequestName(skill, param), RoboChart!Event);
+
+	gpt.trigger = transitionTrigger;
+
+
+		var transitionAction = new RoboChart!Trigger;
+		transitionAction._type = RoboChart!TriggerType#OUTPUT;
+		transitionAction.event = ref( SkillParameterReturnName(skill, param), RoboChart!Event);
+		transitionAction.value = CreateRCRefExp( ref(SkillsManagerVarParameterName(skill, param), RoboChart!Variable ) );
+
+	gpt.action = CreateRCSendEvent(transitionAction);
+
+	return gpt;
+ }
+
+
+  operation SkillsManagerSetParameterTransitions( skls:Set(RoboArch!Skill) ): Set(RoboChart!Transition){
+  	printDebug("SkillsManagerSetParameterTransitions");
+
+	var spts = Set{};
+
+	for ( sk: RoboArch!Skill in skls ) {
+
+		for (pm: RoboArch!Variable in sk.parameters) {
+			spts.add( SetParameterTransition(sk.name, pm.name) );
+		}
+	}
+
+	return spts;
+ }
+
+ operation SetParameterTransition( skill: String, param: String ): RoboChart!Transition {
+  	printDebug("SetParameterTransition");
+
+	var spt = new RoboChart!Transition;
+
+	spt.name = "HandleSetParameterReceive" + SkillParameterSetRequestName(skill, param);
+
+	spt.source = ref( SkillsManagerHandleRequestsName() , RoboChart!State );
+
+	spt.target = ref( SkillsManagerHandleRequestsName() , RoboChart!State );
+
+		var transitionTrigger = new RoboChart!Trigger;
+		transitionTrigger._type = RoboChart!TriggerType#INPUT;
+		transitionTrigger.event = ref( SkillParameterSetRequestName(skill, param), RoboChart!Event);
+		transitionTrigger.parameter = ref( SkillsManagerVarParameterName(skill, param), RoboChart!Variable).name;
+	spt.trigger = transitionTrigger;
+
+	//TODO shuold updated parameter be sent to the skill here.
+
+	return spt;
+ }
+
+
+ operation SkillsManagerHandleTimeGuardExpression(): RoboChart!Expression {
+ 	var smtge = new RoboChart!GreaterThan;
+
+ 	smtge.left = CreateRCClockExp( ref(SkillsManagerClockRequestHandlingName(), RoboChart!Clock) );
+ 	smtge.right = ref(SkillsManagerConstRequestHandlingDelayName(), RoboChart!Variable).varRefToRefExp() ;
+
+ 	return smtge;
+ }

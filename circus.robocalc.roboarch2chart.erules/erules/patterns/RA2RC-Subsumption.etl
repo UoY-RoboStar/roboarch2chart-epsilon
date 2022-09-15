@@ -1,0 +1,30 @@
+/********************************************************************************
+ * Copyright (c) 2022 University of York and others
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0.
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ *
+ * Contributors:
+ *   William Barnett - initial definition
+ ********************************************************************************/
+
+
+@lazy
+rule SubsumptionLayerToController 
+	transform amlyr: RoboArch!ControlLayer
+	to rchssc: RoboChart!ControllerRef {
+	
+		guard : amlyr.pattern.isTypeOf( Subsumption!Htn )
+		
+		printDebug("Start");
+		
+		//TODO generate htn planning robochart model
+		var controller = new RoboChart!ControllerDef;
+		controller.name = amlyr.name;
+		
+		var package = new RoboChart!RCPackage;
+		package.controllers.add(controller);
+	}

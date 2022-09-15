@@ -1,0 +1,419 @@
+package Control::SkillsManager
+
+import set_toolkit::* 
+import sequence_toolkit::* 
+import Types::* 
+import Control::DSkill::Move::* 
+import Control::DSkill::Proximity::* 
+import Control::CSkill::Explore::* 
+
+
+
+
+
+
+stm SkillsManager { 
+	
+	
+	uses IControl
+	uses IMove
+	uses IProximity
+	uses IExplore
+	
+	
+	
+	
+	var activationRequest : Skills , cycleSkills : Seq( Skills )  , currentlyActiveSkills : Set( Skills )  , nextCycleSkills : Seq( Skills )  , executingSkill : Skills , updateRecordComplete : boolean , monitorRequest : Events , currentlyActiveMonitors : Set( Events )  , newExploreobstacleDistance : boolean , newExplorevOut : boolean , newMovevIn : boolean , proximityPriority : nat , explorePriority : nat , exploresafetyDistance : Length , movePriority : nat , exploremaxSpeed : Velocity , currentProximitygap : Length * nat , currentExploreobstacleDistance : Length * nat , currentExplorevOut : Velocities * nat , currentMovevIn : Velocities * nat 
+	 const REQUEST_HANDLING_DELAY : nat , ASYNCHRONOUS_SKILLS : Seq( Skills )  
+	
+	clock requestHandling 
+
+	 state ExecutingMove { 
+	}
+
+	 state Initialise { 
+		entry currentlyActiveSkills = 	{  }   
+		; cycleSkills = 	<  >   
+		; nextCycleSkills = 	<  >   
+		; newExploreobstacleDistance = 	false  
+		; newMovevIn = 	false  
+		; # requestHandling 
+	
+	}
+
+	 state HandleActiveSkills { 
+	}
+
+	 state Cleanup { 
+		entry cycleSkills = 	nextCycleSkills  
+		; nextCycleSkills = 	<  >   
+	
+	}
+
+	 state HandleDeactivation { 
+	}
+
+	 state HandleGetParameter { 
+	}
+
+	 state HandleSetParameter { 
+	}
+
+	 state UpdateRecord { 
+		entry updateRecordComplete = 	false  
+	
+		initial UpdateRecordInitial
+	
+		junction ExecutingSkillSelect
+	
+		 state AddNextCycleSkills { 
+			entry if 	( newExploreobstacleDistance /\ ( filter( nextCycleSkills, { Skills::EXPLORE }  )  == {  }  )  )   
+			 then 
+			nextCycleSkills = 	concat( nextCycleSkills, < Skills::EXPLORE >  )   
+			; newExploreobstacleDistance = 	false  
+			
+			end 
+		
+		}
+	
+		final UpdateRecordFinal
+	
+		 state UpdateValuesProximity { 
+		}
+	
+		 state UpdateValuesMove { 
+		}
+	
+		 state UpdateValuesExplore { 
+		}
+	
+		transition UpdateRecordInitialToExecutingSkillSelect {
+			from UpdateRecordInitial
+			to ExecutingSkillSelect
+		}
+	
+		transition AddNextCycleSkillsToUpdateRecordFinal {
+			from AddNextCycleSkills
+			to f0
+		  	action updateRecordComplete = 	true  
+		
+		}
+	
+		transition SkillSelectToUpdateValuesMove {
+			from ExecutingSkillSelect
+			to UpdateValuesMove
+			condition 	executingSkill == Skills::MOVE  
+		
+		}
+	
+		transition UpdateValuesExploreToAddNextCycleSkills {
+			from UpdateValuesExplore
+			to AddNextCycleSkills
+			trigger completeExplore 
+		}
+	
+		transition ValueReceiveProximitygap {
+			from UpdateValuesProximity
+			to UpdateValuesProximity
+			trigger Proximitygap ? currentProximitygap 
+		  	action newExploreobstacleDistance = 	UpdateValue( currentExploreobstacleDistance, currentProximitygap )   
+		
+		}
+	
+		transition SkillSelectToUpdateValuesExplore {
+			from ExecutingSkillSelect
+			to UpdateValuesExplore
+			condition 	executingSkill == Skills::EXPLORE  
+		
+		}
+	
+		transition UpdateValuesProximityToAddNextCycleSkills {
+			from UpdateValuesProximity
+			to AddNextCycleSkills
+			trigger completeProximity 
+		}
+	
+		transition ValueReceiveExplorevOut {
+			from UpdateValuesExplore
+			to UpdateValuesExplore
+			trigger ExplorevOut ? currentExplorevOut 
+		  	action newMovevIn = 	UpdateValue( currentMovevIn, currentExplorevOut )   
+		
+		}
+	
+		transition SkillSelectToUpdateValuesProximity {
+			from ExecutingSkillSelect
+			to UpdateValuesProximity
+			condition 	executingSkill == Skills::PROXIMITY  
+		
+		}
+	
+		transition UpdateValuesMoveToAddNextCycleSkills {
+			from UpdateValuesMove
+			to AddNextCycleSkills
+			trigger completeMove 
+		}
+	
+	final f0
+	}
+
+	initial SkillsManagerInitial
+
+	 state DoNextSkill { 
+		entry executingSkill = 	head( cycleSkills )   
+	
+	}
+
+	 state HandleActivation { 
+	}
+
+	 state HandleValueQueries { 
+	}
+
+	 state ExecutingExplore { 
+	}
+
+	 state CheckMonitors { 
+		entry if 	Events::SAFETYDISTANCEREACHED in currentlyActiveMonitors /\ LengthCompareLessThan( currentProximitygap[1], exploresafetyDistance )   
+		 then 
+		eventReply ! 	Events::SAFETYDISTANCEREACHED  
+		 
+		end 
+	
+	}
+
+	 state ExecutingProximity { 
+	}
+
+	transition HandleGetParameterReceivegetMovePriorityParameter {
+		from HandleGetParameter
+		to HandleGetParameter
+		trigger getMovePriorityParameter 
+	  	action movePriorityParameter ! 	movePriority  
+	 
+	}
+
+	transition HandleSetParameterReceivesetExplorePriorityParameter {
+		from HandleSetParameter
+		to HandleSetParameter
+		trigger setExplorePriorityParameter ? explorePriority 
+	}
+
+	transition CheckMonitorsToCleanup {
+		from CheckMonitors
+		to Cleanup
+		condition 	cycleSkills == <  >   
+	
+	}
+
+	transition HandleGetParameterToHandleSetParameter {
+		from HandleGetParameter
+		to HandleSetParameter
+		condition 	since( requestHandling )  > REQUEST_HANDLING_DELAY  
+	
+	  	action # requestHandling 
+	}
+
+	transition HandleValueQueriesReceivegetProximityGapValue {
+		from HandleValueQueries
+		to HandleValueQueries
+		trigger getProximityGapValue 
+	  	action ProximitygapValue ! 	( currentProximitygap[1] )   
+	 
+	}
+
+	transition HandleSetParameterReceivesetProximityPriorityParameter {
+		from HandleSetParameter
+		to HandleSetParameter
+		trigger setProximityPriorityParameter ? proximityPriority 
+	}
+
+	transition InitialiseToHandleValueQueries {
+		from Initialise
+		to HandleValueQueries
+	}
+
+	transition HandleGetParameterReceivegetProximityPriorityParameter {
+		from HandleGetParameter
+		to HandleGetParameter
+		trigger getProximityPriorityParameter 
+	  	action proximityPriorityParameter ! 	proximityPriority  
+	 
+	}
+
+	transition HandleDeactivationReceive {
+		from HandleDeactivation
+		to HandleDeactivation
+		trigger deactivate ? activationRequest 
+	  	action currentlyActiveSkills = 	diff( currentlyActiveSkills, { activationRequest }  )   
+	
+	}
+
+	transition DoNextSkillToExecutingExplore {
+		from DoNextSkill
+		to ExecutingExplore
+	}
+
+	transition HandleValueQueriesReceivegetExploreVOutValue {
+		from HandleValueQueries
+		to HandleValueQueries
+		trigger getExploreVOutValue 
+	  	action ExplorevOutValue ! 	( currentExplorevOut[1] )   
+	 
+	}
+
+	transition UpdateRecordToCheckMonitors {
+		from UpdateRecord
+		to CheckMonitors
+		condition 	updateRecordComplete  
+	
+	}
+
+	transition ExecutingMoveToUpdateRecord {
+		from ExecutingMove
+		to UpdateRecord
+	}
+
+	transition HandleSetParameterToDoNextSkill {
+		from HandleSetParameter
+		to DoNextSkill
+		condition 	since( requestHandling )  > REQUEST_HANDLING_DELAY  
+	
+	  	action # requestHandling 
+	}
+
+	transition CheckMonitorsToDoNextSkill {
+		from CheckMonitors
+		to DoNextSkill
+		condition 	isNonEmpty( cycleSkills )   
+	
+	  	action cycleSkills = 	tail( cycleSkills )   
+	
+	}
+
+	transition SkillsManagerInitialToInitialise {
+		from SkillsManagerInitial
+		to Initialise
+	}
+
+	transition DoNextSkillToExecutingProximity {
+		from DoNextSkill
+		to ExecutingProximity
+	}
+
+	transition ExecutingProximityToUpdateRecord {
+		from ExecutingProximity
+		to UpdateRecord
+	}
+
+	transition HandleActivationReceive {
+		from HandleActivation
+		to HandleActivation
+		trigger activate ? activationRequest 
+	  	action currentlyActiveSkills = 	union( currentlyActiveSkills, { activationRequest }  )   
+	
+	}
+
+	transition HandleActiveSkillsReceive {
+		from HandleActiveSkills
+		to HandleActiveSkills
+		trigger getActiveSkills 
+	  	action activeSkills ! 	currentlyActiveSkills  
+	 
+	}
+
+	transition HandleDeactivationToHandleGetParameter {
+		from HandleDeactivation
+		to HandleGetParameter
+		condition 	since( requestHandling )  > REQUEST_HANDLING_DELAY  
+	
+	  	action # requestHandling 
+	}
+
+	transition HandleActiveSkillsToHandleActivation {
+		from HandleActiveSkills
+		to HandleActivation
+		condition 	since( requestHandling )  > REQUEST_HANDLING_DELAY  
+	
+	  	action # requestHandling 
+	}
+
+	transition HandleGetParameterReceivegetExploreMaxSpeedParameter {
+		from HandleGetParameter
+		to HandleGetParameter
+		trigger getExploreMaxSpeedParameter 
+	  	action exploreMaxSpeedParameter ! 	exploremaxSpeed  
+	 
+	}
+
+	transition DoNextSkillToExecutingMove {
+		from DoNextSkill
+		to ExecutingMove
+	}
+
+	transition ExecutingExploreToUpdateRecord {
+		from ExecutingExplore
+		to UpdateRecord
+	}
+
+	transition HandleSetParameterReceivesetExploreSafetyDistanceParameter {
+		from HandleSetParameter
+		to HandleSetParameter
+		trigger setExploreSafetyDistanceParameter ? exploresafetyDistance 
+	}
+
+	transition HandleValueQueriesToHandleActiveSkills {
+		from HandleValueQueries
+		to HandleActiveSkills
+		condition 	since( requestHandling )  > REQUEST_HANDLING_DELAY  
+	
+	  	action # requestHandling 
+	}
+
+	transition HandleGetParameterReceivegetExploreSafetyDistanceParameter {
+		from HandleGetParameter
+		to HandleGetParameter
+		trigger getExploreSafetyDistanceParameter 
+	  	action exploreSafetyDistanceParameter ! 	exploresafetyDistance  
+	 
+	}
+
+	transition HandleSetParameterReceivesetMovePriorityParameter {
+		from HandleSetParameter
+		to HandleSetParameter
+		trigger setMovePriorityParameter ? movePriority 
+	}
+
+	transition HandleActivationToHandleDeactivation {
+		from HandleActivation
+		to HandleDeactivation
+		condition 	since( requestHandling )  > REQUEST_HANDLING_DELAY  
+	
+	  	action # requestHandling 
+	}
+
+	transition HandleSetParameterReceivesetExploreMaxSpeedParameter {
+		from HandleSetParameter
+		to HandleSetParameter
+		trigger setExploreMaxSpeedParameter ? exploremaxSpeed 
+	}
+
+	transition HandleGetParameterReceivegetExplorePriorityParameter {
+		from HandleGetParameter
+		to HandleGetParameter
+		trigger getExplorePriorityParameter 
+	  	action explorePriorityParameter ! 	explorePriority  
+	 
+	}
+
+	transition CleanupToHandleValueQueries {
+		from Cleanup
+		to HandleValueQueries
+	  	action # requestHandling 
+	}
+
+	 
+} 
+
+
+

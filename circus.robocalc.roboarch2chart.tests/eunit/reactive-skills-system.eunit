@@ -1,0 +1,68 @@
+/********************************************************************************
+ * Copyright (c) 2022 University of York and others
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0.
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ *
+ * Contributors:
+ *   William Barnett - initial definition
+ ********************************************************************************/
+
+
+@model
+operation loadReactiveSkillsModels() {
+  "Loading reactive skills models.".println();
+  
+  runTarget("runmodelmanagement.load-robochart-lib");
+  runTarget("load-reactiveskills-minimal-models");
+}
+
+@After
+operation cleanup(){
+
+
+}
+
+
+$onlyWith Map{ "RoboArch" = "RA_ReactiveSkillsMinimal", "RoboChart"="GenRC_ReactiveSkillsMinimal", "Expected_RoboChart"="RC_ReactiveSkillsMinimal", "RoboChartLib_Core" = "RoboChartLib_Core", "RoboChartLib_Set" = "RoboChartLib_Set", "RoboChartLib_Sequence" = "RoboChartLib_Sequence", "RoboChartLib_Relation" = "RoboChartLib_Relation", "RoboChartLib_Function" = "RoboChartLib_Function"} 
+$onlyWith Map{ "RoboArch" = "RA_ReactiveSkillsObstacleAvoidance", "RoboChart"="GenRC_ReactiveSkillsObstacleAvoidance", "RoboChartLib_Core" = "RoboChartLib_Core", "RoboChartLib_Set" = "RoboChartLib_Set", "RoboChartLib_Sequence" = "RoboChartLib_Sequence", "RoboChartLib_Relation" = "RoboChartLib_Relation", "RoboChartLib_Function" = "RoboChartLib_Function" }
+$onlyWith Map{ "RoboArch" = "RA_ReactiveSkillsObstacleAvoidanceMonitor", "RoboChart"="GenRC_ReactiveSkillsObstacleAvoidanceMonitor", "RoboChartLib_Core" = "RoboChartLib_Core", "RoboChartLib_Set" = "RoboChartLib_Set", "RoboChartLib_Sequence" = "RoboChartLib_Sequence", "RoboChartLib_Relation" = "RoboChartLib_Relation", "RoboChartLib_Function" = "RoboChartLib_Function" }
+
+
+@test
+operation TransformedModelMatchesExpected() {
+	
+  runTarget("runmodelmanagement.ra2rc");
+  runTarget("runmodelmanagement.rc2txt");
+  
+  //TODO create the expected RoboChart models
+  //assertEqualModels("Expected_RoboChart", "RoboChart");
+ 
+}
+
+/* TODO need to check loading multiple files RoboChart models
+
+$with Map { "" = "" }
+@test
+operation NonPlatformCompare() {
+	runTarget("debug-models-rs");
+	
+  "p1 model - ".println();
+   Platform1!RCPackage.allInstances().asString().println();
+   
+   "p2 model - ".println();
+   Platform2!RCPackage.allInstances().asString().println();
+	
+	 assertEqualModels("Platform1", "Platform2");
+}
+
+$with Map { "" = "" }
+@test
+operation ReloadCompare() {
+	runTarget("debug-models");
+	 assertEqualModels("Reloaded_ReactiveSkillsObstacleAvoidance", "Reloaded_ReactiveSkillsMinimal");
+}
+*/

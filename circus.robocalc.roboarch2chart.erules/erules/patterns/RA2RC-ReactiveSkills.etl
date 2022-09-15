@@ -1,0 +1,641 @@
+/********************************************************************************
+ * Copyright (c) 2022 University of York and others
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0.
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ *
+ * Contributors:
+ *   William Barnett - initial definition
+ ********************************************************************************/
+
+
+import "../common/RA2RC-ReactiveSkills.eol";
+import "../common/RA2RC-Functions.eol";
+import "../common/RoboChart.eol";
+
+import "./reactive_skills/SkillToStateMachine.etl";
+import "./reactive_skills/CSkillToStateMachine.etl";
+import "./reactive_skills/DSkillToStateMachine.etl";
+import "./reactive_skills/SkillsManagerToStateMachine.etl";
+
+pre reactiveskills{
+   // Controls whether debug information is printed.
+	var debug = true;
+	var debugPrintRuleNames = true;
+	var level = 0;
+	var previouslevel = 0;
+
+	var CLAYER_IMPORT : String;
+	var DEFS_IMPORT: String;
+
+	if( RoboArch!ControlLayer.allInstances().notEmpty() ) {
+		var clayer = RoboArch!ControlLayer.allInstances().unique();
+		CLAYER_IMPORT  = clayer.name.toLowerCase().firstToUpperCase() ;
+	} else {
+		CLAYER_IMPORT = null;
+	}
+
+	// Reactive Skills required features
+	var allSkills = RoboArch!Skill.allInstances();
+	printDebug("$$ all SKILLS: " + allSkills.asString() );
+
+	for (skl: RoboArch!Skill in allSkills){
+
+		//Priority param
+		var priorityParameter = new RoboArch!Variable;
+
+		priorityParameter.name = PriorityParamName();
+		priorityParameter.type =  ref("nat", RoboChartLib_Core!PrimitiveType) ;
+
+		skl.parameters.add( priorityParameter );
+	}
+
+}
+
+
+@lazy
+rule ReactiveSkillsLayerToTypes
+	transform amrsl: RoboArch!ControlLayer
+	to rctyp: Set(TypeDecl) {
+		guard : amrsl.pattern.isTypeOf( RoboArch!ReactiveSkills )
+
+		printDebug("Start");
+
+		rctyp.add( SkillsToSkillEnumeration(amrsl.pattern.skills) );
+		rctyp.add(  MonitorsToEventEnumeration(amrsl.pattern.skillsManager.stateMonitors) );
+	}
+	
+
+@lazy
+rule ReactiveSkillsLayerToFunctions
+	transform amrsl: RoboArch!ControlLayer
+	to rcfun: Set(RoboChart!Function) {
+		guard : amrsl.pattern.isTypeOf( RoboArch!ReactiveSkills )
+
+		printDebug("Start");
+		
+		// Where
+		var anyNatProduct = CreateRCProduct( Sequence{CreateRCAnyType("X"), ref("nat", RoboChartLib_Core!PrimitiveType) } );
+		
+		var updateValueFunction = new RoboChart!Function; 
+		updateValueFunction.name = SkillsManagerFunctionUpdateValueName();
+		updateValueFunction.type = ref("boolean", RoboChartLib_Core!PrimitiveType);
+		updateValueFunction.parameters = Sequence { CreateRCParameter("value", anyNatProduct) , 
+		                                            CreateRCParameter("newValue", anyNatProduct.clone() )  } ;
+
+		rcfun.add(updateValueFunction);
+	}
+
+
+@lazy
+rule ReactiveSkillsLayerToInterface
+	transform amrsl: RoboArch!ControlLayer
+	to rcrsi: Set(RoboChart!Interface) {
+		guard : amrsl.pattern.isTypeOf( RoboArch!ReactiveSkills )
+
+		printDebug("Start");
+
+		var externalInterface = new RoboChart!Interface;
+		externalInterface.name = InterfacePrefix() + amrsl.name.toLowerCase().firstToUpperCase();
+		externalInterface.events.addAll( ReactiveSkillsLayerInterfaceInputs(amrsl) );
+		externalInterface.events.addAll( ReactiveSkillsLayerInterfaceOutputs(amrsl) );
+
+		rcrsi.add( externalInterface );
+
+
+		for (skl: RoboArch!DSkill in amrsl.pattern.skills){
+			rcrsi.add( skl.equivalent("DSkillToPlatformActuationInterface") );
+			rcrsi.add( skl.equivalent("DSkillToPlatformSensingInterface") );
+		}
+
+		printDebug("creating event interfaces - " + amrsl.pattern.skills.select(s | s.isKindOf(RoboArch!Skill)).asString() );
+		for (skl in amrsl.pattern.skills.select(s | s.isKindOf(RoboArch!Skill)) ){
+				rcrsi.add( SkillToInterface(skl) );
+		}
+
+	}
+
+// Incoroporated into ReactiveSkillsLayerToInterface as per rule.
+//@lazy
+//rule ReactiveSkillsLayerToExternalInterface
+//	transform amrsl: RoboArch!ControlLayer
+///	to rcrsi: RoboChart!Interface {
+//		guard : amrsl.pattern.isTypeOf( RoboArch!ReactiveSkills )
+//
+//		printDebug("Start");
+//
+//		rcrsi.name = InterfacePrefix() + amrsl.name.toLowerCase().firstToUpperCase();
+//		rcrsi.events.addAll( SkillsToExternalInterfaceInputs(amrsl.pattern) );
+//		rcrsi.events.addAll( SkillsToExternalInterfaceOutputs(amrsl.pattern) );
+//
+//	}
+
+//@lazy
+//rule ReactiveSkillsLayerInterfaceInputs
+//	transform amrsl: RoboArch!ControlLayer
+//	to ips: Set(Events) {
+//		guard : amrsl.pattern.isTypeOf( RoboArch!ReactiveSkills )
+//	}
+
+@lazy
+rule ReactiveSkillsLayerToController
+	transform amrsl: RoboArch!ControlLayer
+	to rcrsc: RoboChart!ControllerRef {
+
+		guard : amrsl.pattern.isTypeOf( RoboArch!ReactiveSkills )
+
+		printDebug("Start");
+
+		var controller = new RoboChart!ControllerDef;
+
+		//name
+		var amrslFormattedName = amrsl.name.toLowerCase().firstToUpperCase();
+		controller.name =  amrslFormattedName;
+		rcrsc.populateControllerRef(controller);
+
+		//interfaces
+ 		controller.interfaces.add( ref( InterfacePrefix() + amrslFormattedName, RoboChart!Interface ) ); //Layer external
+
+ 		for (skl: RoboArch!DSkill in amrsl.pattern.skills){ // Platform
+ 			controller.interfaces.add( ref( InterfacePrefix() + skl.name + PlatformSensingPostfix(), RoboChart!Interface) );
+ 			controller.interfaces.add( ref( InterfacePrefix() + skl.name + PlatformActuationPostfix(), RoboChart!Interface) );
+ 		}
+
+		//machines
+		for (skl: RoboArch!Skill in amrsl.pattern.skills) {
+			controller.machines.add( SkillToStateMachine(skl) );
+		}
+
+		controller.machines.add( SkillsManagerToStateMachine( amrsl.pattern.skillsManager, amrsl.pattern.skills) );
+
+
+		//Connections
+		controller.connections =  SkillsManagerToConnections( Set{amrsl} );
+
+
+
+		//Create and populate the layer package
+		var package = new RoboChart!RCPackage;
+		package.imports.add( getPackageImport(DefinitionsName()) );
+		package.imports.add( getPackageImport(SkillsManagerName()) );
+
+		for (skl : RoboArch!Skill in amrsl.pattern.skills){
+			package.imports.add( getPackageImport(skl.name) );
+		}
+
+		package.name = amrsl.name.toLowerCase().firstToUpperCase();
+		package.controllers.add(controller);
+	}
+
+
+@lazy
+rule ReactiveSkillsLayerToRoboticPlatform
+	transform amrsl: RoboArch!ControlLayer
+	to rcrp: RoboChart!RoboticPlatformRef {
+
+		guard : amrsl.pattern.isTypeOf( RoboArch!ReactiveSkills )
+
+		printDebug("Start");
+
+		var platform = new RoboChart!RoboticPlatformDef;
+
+		//name
+		platform.name = PlatformName();
+		rcrp.populatePlatformRef(platform);
+
+		//actuators
+		for (skl : RoboArch!DSkill in amrsl.pattern.skills){
+			platform.interfaces.add ( ref(InterfacePrefix() + skl.name + PlatformActuationPostfix() , RoboChart!Interface) );
+		}
+
+		//sensors
+		for (skl : RoboArch!DSkill in amrsl.pattern.skills){
+			platform.interfaces.add ( ref(InterfacePrefix() + skl.name + PlatformSensingPostfix() , RoboChart!Interface) );
+		}
+
+
+		// Create and populate the platform package
+		var package = new RoboChart!RCPackage;
+
+		package.name = PlatformName();
+
+		package.imports.add( getPackageImport(DefinitionsName()) );
+
+		package.robots.add(platform);
+	}
+
+@lazy
+rule ReactiveSkillsLayerInterfaceInputs
+	transform amrsl: RoboArch!ControlLayer
+	to rceini: Set(RoboChart!Event) {
+
+		guard : amrsl.pattern.isTypeOf( RoboArch!ReactiveSkills )
+
+		printDebug("Start");
+
+		var skillEnum = ref("Skills", RoboChart!Enumeration);
+		var eventEnum = ref("Events", RoboChart!Enumeration);
+
+		rceini.add( CreateRCEvent( ActivationRequestName(), skillEnum) );
+		rceini.add( CreateRCEvent( DeactivationRequestName(), skillEnum) );
+		rceini.add( CreateRCEvent( ActiveSkillsRequestName() ) );
+		rceini.add( CreateRCEvent("initiateEventMonitor", eventEnum) );
+		rceini.add( CreateRCEvent("stopEventMonitor", eventEnum) );
+
+		//Parameters
+		for(skl: RoboArch!Skill in amrsl.pattern.skills){
+			for(par: RoboArch!Variable in skl.parameters){
+				//set
+				var setEvent = CreateRCEvent(  SkillParameterSetRequestName(skl.name, par.name) , par.type );
+				rceini.add(setEvent);
+
+				//get
+				var getEvent = CreateRCEvent( SkillParameterGetRequestName(skl.name, par.name) );
+				rceini.add(getEvent);
+			}
+		}
+
+		//Values
+		for(skl: RoboArch!CSkill in amrsl.pattern.skills){
+			for(out: RoboArch!Variable in skl.outputs){
+				//get
+				var getEvent = CreateRCEvent( SkillValueRequestName(skl.name, out.name) );
+				rceini.add(getEvent);
+			}
+		}
+		for(skl: RoboArch!DSkill in amrsl.pattern.skills){
+			for(sdt: RoboArch!Variable in skl.outputs){
+				//get
+				var getEvent = CreateRCEvent( SkillValueRequestName(skl.name, sdt.name) );
+				rceini.add(getEvent);
+			}
+		}
+	}
+
+@lazy
+rule ReactiveSkillsLayerInterfaceOutputs
+	transform amrsl: RoboArch!ControlLayer
+	to rceino: Set(RoboChart!Event) {
+
+		guard : amrsl.pattern.isTypeOf( RoboArch!ReactiveSkills )
+
+		printDebug("Start");
+
+		var skillEnum = ref("Skills", RoboChart!Enumeration);
+		var eventEnum = ref("Events", RoboChart!Enumeration);
+
+		rceino.add( CreateRCEvent( ActiveSkillsReturnName(), CreateRCSet( skillEnum ) ) );
+		rceino.add( CreateRCEvent("eventReply", eventEnum) );
+
+		//Parameters
+		for(skl: RoboArch!Skill in amrsl.pattern.skills){
+			for(par:RoboArch!Variable in skl.parameters){
+				//value
+				printDebug(">>>>>>>>>>>>>##. par.type  " + par.type.asString() );
+				var returnEvent = CreateRCEvent( SkillParameterReturnName(skl.name, par.name), par.type );
+				rceino.add(returnEvent);
+			}
+		}
+
+		//Values
+		for(skl: RoboArch!CSkill in amrsl.pattern.skills){
+			for(out: RoboArch!Variable in skl.outputs){
+				//return
+				var returnEvent = CreateRCEvent( SkillValueReturnName(skl.name, out.name), out.type );
+				rceino.add(returnEvent);
+			}
+		}
+		for(skl: RoboArch!DSkill in amrsl.pattern.skills){
+			for(sd: RoboArch!Variable in skl.outputs){
+				//return
+				var returnEvent = CreateRCEvent( SkillValueReturnName(skl.name, sd.name), sd.type );
+				rceino.add(returnEvent);
+			}
+		}
+	}
+
+@lazy
+rule SkillsToSkillEnumeration
+	transform amrsl: RoboArch!ReactiveSkills
+	to rcskl: RoboChart!Enumeration {
+
+		printDebug("Start");
+
+		rcskl.name = SkillsEnumName();
+
+		var amskls = amrsl.skills;
+
+		for(skl: RoboArch!Skill in amskls){
+			var literal = new RoboChart!Literal;
+			literal.name = SkillLiteralName(skl.name);
+			rcskl.literals.add(literal);
+		}
+	}
+
+@lazy
+rule MonitorsToEventEnumeration
+	transform rasm: RoboArch!SkillsManager
+	to rceve: RoboChart!Enumeration {
+
+		printDebug("Start");
+
+		rceve.name = "Events";
+
+		var ammons = rasm.stateMonitors;
+
+
+		//Each Monitor can report the occurence of an event.
+		for(mon: RoboArch!Monitor in ammons){
+			var literal = new RoboChart!Literal;
+			literal.name = mon.name.toUpperCase();
+			rceve.literals.add(literal);
+		}
+	}
+
+
+
+
+/*
+@lazy
+rule ReactiveSkillsPatternToRCPackage
+	transform ampat: RoboArch!ReactiveSkills
+	to rcpat: RoboChart!RCPackage{
+
+		printDebug("Start");
+		var layerName = ampat.eContainer().name;
+		rcpat.name = layerName;
+
+		//Skill machines
+		increaseDebug();
+		var skillRcParts = ampat.skills.equivalent(); // Packages for each skill and plus a seq(Event) for each skill's paramters.
+		decreaseDebug();
+
+		var paramterEvents = skillRcParts.select(p|p.isTypeOf(RoboChart!Event));
+
+		//printDebug("xx0 e " + skillRcParts.select(m|m.isTypeOf(RoboChart!Event)).asString());
+		//printDebug("xx0 p " + skillRcParts.select(m|m.isTypeOf(RoboChart!RCPackage)).asString());
+
+
+		//Skills Manager
+		var managerParts = ampat.skillsManager.equivalents();
+		printDebug("sm " + managerParts.asString());
+		var managerPackages = managerParts.select( p|p.isTypeOf(RoboChart!RCPackage) );
+		var managerMachine = getSkillsManagerMachineFromRCPackages(managerPackages);
+
+		printDebug("sm " + managerMachine.asString());
+
+		//Enumeration - Skill
+		var skillEnum = SkillsToSkillEnum(ampat.skills);
+		rcpat.types.add(skillEnum);
+
+		//Enumeration - Event
+		var eventEnum = SkillsToEventEnum(ampat.skills);
+		rcpat.types.add(eventEnum);
+
+		//Controller - Interface
+		//-- Added to latest
+
+		rcpat.interfaces.add(controllerInterface);
+
+		//Controller - Refer to Machines
+		var controller = new RoboChart!ControllerDef;
+		controller.name = layerName;
+
+		var skillMachineRefs = StatemachineDefsToStateMachineRefs(allSkillMachines); //Create machine references
+		skillMachineRefs.add( StatemachineDefToStateMachineRef(managerMachine) );
+
+		controller.machines.addAll(skillMachineRefs);
+
+		//Controller - Add connecections
+		var managerConnections = managerParts.select( p|p.isKindOf(Collection(RoboChart!Connection)) ).flatten();
+		printDebug("sm mc " + managerConnections.asString());
+		UpdateSkillConnectionReferences(managerConnections, skillMachineRefs);
+		controller.connections.addAll(managerConnections);
+		rcpat.controllers.add(controller);
+	}
+*/
+
+/*************************
+ *  Skills
+ **************************/
+
+ //@greedy
+ rule SkillToParameterEvents
+ 	transform amskl: RoboArch!Skill
+ 	to rcskl: Sequence(RoboChart!Event){
+ 		printDebug("Start - Skill");
+ 		printDebug("zz " + amskl.parameters.asString());
+ 		rcskl.addAll( amskl.parameters.clone() );
+ 	}
+
+
+@lazy
+rule DSkillToPlatformActuationInterface
+	transform amdsk: RoboArch!DSkill
+	to rcdai: RoboChart!Interface {
+		printDebug("Start");
+
+		//name
+		rcdai.name = InterfacePrefix() + amdsk.name + PlatformActuationPostfix();
+
+		//events
+		for (ac: RoboArch!Variable in amdsk.inputs) {
+			var name =  amdsk.name + ac.name + PlatformName();
+			var type = ac.type;
+			rcdai.events.add(  CreateRCEvent(name, type)  );
+		}
+	}
+
+
+@lazy
+rule DSkillToPlatformSensingInterface
+	transform amdsk: RoboArch!DSkill
+	to rcdsi: RoboChart!Interface {
+
+		printDebug("Start");
+
+		//name
+		rcdsi.name = InterfacePrefix() + amdsk.name + PlatformSensingPostfix();
+
+		//events
+		for (sd: RoboArch!Variable in amdsk.outputs){
+			var name = amdsk.name + sd.name + PlatformName();
+			var type = sd.type;
+			rcdsi.events.add( CreateRCEvent(name, type) );
+		}
+
+	}
+
+/* OLD Rule TODO: delete
+@lazy
+rule DSkillToOperationSig
+	transform amdsk: RoboArch!DSkill
+	to rcdso: RoboChart!OperationSig {
+
+		printDebug("Start");
+
+		//name
+		rcdso.name = amdsk.name ;
+
+		//parameters
+		for (ac: RoboArch!Event in amdsk.inputs){
+			var parameter = new RoboChart!Parameter;
+
+			parameter.name = ac.name;
+			parameter.type = ac.type.equivalent().clone();
+
+			printDebug("vvv ac etyp " + parameter.type.ref.name );
+			printDebug("vvv ac etyp " + parameter.type.asString() );
+			printDebug("vvv ac etyp " + ac.type.equivalents().asString() );
+
+
+			rcdso.parameters.add(parameter);
+		}
+	}
+*/
+
+
+
+@abstract
+rule SkillToInterface
+	transform amskl: RoboArch!Skill
+	to rcskl: RoboChart!Interface {
+		printDebug("Start - " + amskl.name);
+
+		rcskl.name = SkillInterfaceName(amskl.name);
+
+		rcskl.events.add( CreateRCEvent("activate" + amskl.name) );
+
+		rcskl.events.add( CreateRCEvent("deactivate" + amskl.name) );
+
+		rcskl.events.add( CreateRCEvent("execute" + amskl.name) );
+
+		rcskl.events.add( CreateRCEvent( SkillCompleteEventName(amskl.name) ) );
+
+		//Priority parameter
+		//var priorityParamName = amskl.name + "Priority" + "Param";
+		//var priorityParamType = ref("nat", RoboChartLib_Core!PrimitiveType) ;
+		//rcskl.events.add( CreateRCEvent(priorityParamName, priorityParamType) );
+
+		//User defined parameter
+		for ( par: RoboArch!Variable in amskl.parameters){
+			var name = amskl.name + par.name + "Param";
+			var type = par.equivalent("VariableToVariable").type;
+			rcskl.events.add( CreateRCEvent(name, type) );
+		}
+		
+		//Create and populate the  package
+		var package = new RoboChart!RCPackage;
+		package.name = SkillPackageName(amskl);
+		package.imports.add( getPackageImport(DefinitionsName()) );
+		package.interfaces.add(rcskl);
+	}
+
+
+
+@lazy
+rule CSkillToInterface
+	transform amcskl: RoboArch!CSkill
+	to rcskl: RoboChart!Interface
+	extends SkillToInterface{
+
+		for ( inp: RoboArch!Variable in amcskl.inputs){
+			var name = amcskl.name + inp.name ;
+			var type = inp.equivalent("VariableToVariable").type;
+			rcskl.events.add( CreateRCEvent(name, type) );
+		}
+
+		for ( out: RoboArch!Variable in amcskl.outputs){
+			var name = amcskl.name + out.name ;
+			var type = CreateRCProduct( Sequence{ out.equivalent("VariableToVariable").type.clone() ,
+			                                      ref("nat", RoboChartLib_Core!PrimitiveType ) }
+			                           );
+			rcskl.events.add( CreateRCEvent(name, type) );
+		}
+
+	}
+
+@lazy
+rule DSkillToInterface
+	transform amdskl: RoboArch!DSkill
+	to rcskl: RoboChart!Interface
+	extends SkillToInterface{
+
+		for ( atc: RoboArch!Variable in amdskl.inputs){
+			var name = amdskl.name + atc.name;
+			var type = atc.equivalent("VariableToVariable").type;
+			rcskl.events.add( CreateRCEvent(name, type) );
+		}
+
+		for ( sdt: RoboArch!Variable in amdskl.outputs){
+			var name = amdskl.name + sdt.name;
+			var type = CreateRCProduct( Sequence{ sdt.equivalent("VariableToVariable").type.clone() ,
+			                                      ref("nat", RoboChartLib_Core!PrimitiveType ) }
+			                            );
+			rcskl.events.add( CreateRCEvent(name, type) );
+		}
+	}
+
+@lazy
+rule VariableToVariable
+	transform amsdt: RoboArch!Variable
+	to rcvar: RoboChart!Variable {
+		printDebug("Start");
+
+		rcvar.name = amsdt.name;
+		rcvar.type = amsdt.type.equivalent();
+	}
+
+@lazy
+rule VariableToEvent
+	transform amsdt: RoboArch!Variable
+	to rceve: RoboChart!Event {
+		printDebug("Start");
+
+		rceve.name = amsdt.name;
+		rceve.type = amsdt.type.equivalent();
+	}
+
+/*************************
+ *  Skills Manager
+ **************************/
+
+
+
+//TODO this is duplicated as eol rule
+ @lazy
+ rule SkillsManagerToRCConnections
+ 	transform amskm: RoboArch!SkillsManager
+ 	to rcscn: Sequence(RoboChart!Connection){
+
+ 		printDebug("Start");
+
+ 		rcscn.addAll( amskm.interskillconnections.equivalent("SkillConnectionToConnection") );
+ 	}
+
+
+ @lazy
+ rule SkillConnectionToConnection
+ 	transform amskc: RoboArch!SkillConnection
+ 	to rcskc: RoboChart!Connection{
+ 		guard : amskc.startOutput.isDefined() and amskc.endInput.isDefined()
+
+ 		printDebug("Start");
+
+ 		rcskc.bidirec = false;
+ 		rcskc.`async` = true;
+
+ 		var fromSkillMachine = SkillToStateMachine( amskc.start );
+
+ 		var toSkillMachine = SkillToStateMachine( amskc.end );
+
+
+ 		rcskc.from =  fromSkillMachine;
+ 		rcskc.efrom = amskc.startOutput.equivalent("VariableToEvent");
+ 		rcskc.`to` = toSkillMachine;
+ 		rcskc.eto = amskc.endInput.equivalent("VariableToEvent");
+ 	}
+ 	

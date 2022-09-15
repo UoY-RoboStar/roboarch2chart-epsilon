@@ -1,0 +1,51 @@
+<project name="testmodelmanagement">
+
+
+	<!-- MODEL MANAGEMENT TARGETS -->
+
+	<!-- CLEAN TARGETS -->
+	<target name="clean" description="Cleans the transformed model and text destination folder.">
+		
+		<echo>  cleaning models:  ${transformed.model.location}		</echo>
+		<echo>  cleaning text:  ${generated.text.location}		</echo>
+		
+		<epsilon.disposeModels/>
+		<delete includeemptydirs="true" quiet="true">
+		  <fileset dir="${transformed.model.location}" includes="**/*"/>
+		  <fileset dir="${generated.text.location}" includes="**/*"/>
+		</delete>
+	</target>
+	
+	<target name="clean-models" description="Cleans the transformed model destination folder.">
+		
+		<echo>  cleaning models:  ${transformed.model.location}		</echo>
+		
+		<epsilon.disposeModels/>
+		<delete includeemptydirs="true" quiet="true">
+		  <fileset dir="${transformed.model.location}" includes="**/*"/>
+		</delete>
+	</target>
+	
+	
+	
+	<target name="test-rule-ra2rc" description="Runs the RoboArch to RoboChart transformation for a specific rule for each test.">
+		
+		<epsilon.etl src="${tests.base.location}/eunit/TestRoboArchRule.etl">
+			<model ref="RoboArch"/>
+			<model ref="RoboChart"/>
+			<model ref="RoboChartLib_Core"/>
+			<model ref="RoboChartLib_Set"/>
+			<model ref="RoboChartLib_Sequence"/>
+			<model ref="RoboChartLib_Relation"/>
+			<model ref="RoboChartLib_Function"/>
+			
+			 <uses ref="TestRuleName" as="ruleName"/>
+			 <uses ref="TestElementName" as="elementName"/>
+			 <uses ref="TestElementType" as="elementType"/>
+			<uses ref="TestRuleOutput" as="ruleOutput"/>
+		</epsilon.etl>
+	</target>
+	
+
+
+</project>

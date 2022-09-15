@@ -1,0 +1,103 @@
+/********************************************************************************
+ * Copyright (c) 2022 University of York and others
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0.
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ *
+ * Contributors:
+ *   William Barnett - initial definition
+ ********************************************************************************/
+
+import "../../common/RA2RC-Functions.eol";
+import "../../common/RoboChart.eol";
+import "SkillsManagerToStateMachine.eol" ;
+
+ @lazy
+ rule SkillsManagerToStateMachine
+ 	transform amrsl: RoboArch!ControlLayer
+ 	to rcskmref: RoboChart!StateMachineRef {
+		guard : amrsl.pattern.isTypeOf( RoboArch!ReactiveSkills )
+ 		printDebug("Start");
+
+ 		var amskm = amrsl.pattern.skillsManager;
+ 		var skls = amrsl.pattern.skills;
+
+ 		var rcskm = new RoboChart!StateMachineDef;
+
+ 		//Name
+ 		rcskm.name  = SkillsManagerName();
+
+ 		//Interfaces 
+ 		rcskm.interfaces.add( ref(LayerInterfaceName(amrsl.name), RoboChart!Interface) );
+
+ 		rcskm.interfaces.addAll( skls.collect( s : RoboArch!Skill | ref( SkillInterfaceName(s.name), RoboChart!Interface) ) ) ;
+
+
+    /*******************
+    *  Variables
+	*******************/
+	var variables = new RoboChart!VariableList;
+	variables.modifier = VariableModifier#VAR;
+
+	variables.vars = SkillsManagerBaseVariables();
+
+	variables.vars.addAll( SkillsManagerNewSkillInputFlagVariables(skls) );
+
+	variables.vars.addAll( SkillsManagerParameterVariables(skls) );
+
+	variables.vars.addAll( SkillsManagerInputOutputVariables(skls) );
+
+	rcskm.variableList.add( variables );
+
+
+
+
+	var constants = new RoboChart!VariableList;
+	constants.modifier = VariableModifier#CONST;
+
+	constants.vars.addAll( SkillsManagerConstants() );
+
+	rcskm.variableList.add( constants );
+
+
+   /*******************
+    *  Clocks
+	*******************/
+	rcskm.clocks.add( CreateRCClock("requestHandling") );
+
+
+   /*******************
+    *  States
+	*******************/
+	rcskm.nodes.addAll( SkillsManagerPatternStates(skls, amskm.interskillconnections, amskm.stateMonitors) );
+
+   /*******************
+    *  Transitions
+	*******************/
+	rcskm.transitions.addAll(SkillsManagerPatternTransitions(skls));
+
+
+
+
+ 		rcskmref.populateStateMachineRef(rcskm);
+
+ 		//Create and populate the  package
+
+		var package = new RoboChart!RCPackage;
+		package.name = CLAYER_IMPORT + rc_separator() + "SkillsManager";
+
+		package.imports.add( STD_IMPORT_SET_TOOLKIT() );
+
+		package.imports.add( STD_IMPORT_SEQUENCE_TOOLKIT() );
+
+		package.imports.add( getPackageImport(DefinitionsName()) );
+
+		for (skl : RoboArch!Skill in skls){
+			package.imports.add( getPackageImport(skl.name) );
+		}
+
+		package.machines.add(rcskm);
+ }
