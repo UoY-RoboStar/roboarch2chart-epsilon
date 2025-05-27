@@ -127,8 +127,9 @@ rule SystemToRCModule
 		var cLayer = amsys.layers.select( lyr | lyr.isTypeOf(RoboArch!ControlLayer) );
 		printDebug(amsys.robot);
 		var roboticPlatform;
-		if ( (amsys.robot.operations.size() > 0) or (amsys.robot.interfaces.size() > 0) or 
-		     (amsys.robot.pinterfaces.size() > 0) or (amsys.robot.variableList.size() > 0) ) {
+		if ( amsys.robot != null and 
+			((amsys.robot.operations.size() > 0) or (amsys.robot.interfaces.size() > 0) or 
+		     (amsys.robot.pinterfaces.size() > 0) or (amsys.robot.variableList.size() > 0)) ) {
 		    printDebug("Adding robotic platform: " + amsys.robot);
 			roboticPlatform = amsys.robot.equivalent();
 			printDebug("roboticPlatform: " + roboticPlatform);
