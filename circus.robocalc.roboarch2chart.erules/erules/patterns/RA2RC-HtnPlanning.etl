@@ -12,18 +12,32 @@
  ********************************************************************************/
 
 @lazy
-rule HtnPlanningLayerToController 
+rule HtnPlanningLayerToStateMachinesAndConnections
 	transform amlyr: RoboArch!PlanningLayer
-	to rchtnc: RoboChart!ControllerRef {
+	to rcstms: Set(RoboChart!StateMachine), rccons: Set(RoboChart!Connection) {
 	
 		guard : amlyr.pattern.isTypeOf( RoboArch!Htn )
 		
 		printDebug("Start");
 		
 		//TODO generate htn planning robochart model
-		var controller = new RoboChart!ControllerDef;
-		controller.name = amlyr.name;
+		var stm = new RoboChart!StateMachineDef;
+		stm.nodes = Set{};
+		stm.transitions = Set{};
 		
-		var package = new RoboChart!RCPackage;
-		package.controllers.add(controller);
+		var initialNode = new RoboChart!Initial;
+		initialNode.name = "initial";
+		stm.nodes.add(initialNode);
+		
+		var stateNode = new RoboChart!State;
+		stateNode.name = "s0";
+		stm.nodes.add(stateNode);
+		
+		var trans = new RoboChart!Transition;
+		trans.name = "intialTos0";
+		trans.source = initialNode;
+		trans.target = stateNode;
+		stm.transitions.add(trans);
+		
+		rcstms.add(stm);
 	}

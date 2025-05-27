@@ -1,5 +1,5 @@
 /********************************************************************************
- * Copyright (c) 2022 University of York and others
+ * Copyright (c) 2022-2025 University of York and others
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License 2.0 which is available at
@@ -8,15 +8,17 @@
  * SPDX-License-Identifier: EPL-2.0
  *
  * Contributors:
- *   William Barnett - initial definition
+ *   
  ********************************************************************************/
 
 import "./common/Common.eol";
 import "./common/RoboChart.eol";
 import "./common/RA2RC-TopLevel.eol";
+import "./common/RA2RC-MAPLEK.eol";
 
 import "RA2RC-Expressions.etl";
 import "./patterns/RA2RC-ReactiveSkills.etl";
+import "./patterns/RA2RC-MAPLEK.etl";
 
 
 pre {
@@ -32,51 +34,130 @@ pre {
 	printDebug("RoboArch to RoboChart");
 	printDebug("The input model has " + inputSystem.first().layers.size().asString() + " layers.");
 	
+//	var tool = new Native("circus.robocalc.robochart2sim.textual.tools.Util");
+//	var rs = RoboChart.getResource().getResourceSet();
+//	printDebug("Giving live scope");
+//	rs.setURIResourceMap(new Map);
+//	tool.giveLiveScope(rs);
+
+//	var tool = new Native("org.eclipse.xtext.ui.resource.LiveScopeResourceSetInitializer");
+//	printDebug("Giving live scope");
+//	tool.giveLiveScope(rs);
 }
 
 post {
-	printDebug("Complete.");
+	printDebug("//-[Saving resources]//-");
+	
+	for (p in RoboChart!RCPackage.all) {
+		var outputURI = RoboChart.getResource().getURI();
+		var outfolderURI = outputURI.trimsegments(1);
+		var newURI = outfolderURI.appendSegment(p.name + ".xmi");
+		
+		var rsset = RoboChart.getResource().getResourceSet();
+			
+		// If the new URI is different from that originally set,
+		// it means that this is an RCPackage whose '.rct' should
+		// be stored somewhere else.
+		//
+		// So we create a new Resource, with the newURI, and add 't' to it.
+		//
+		// WARNING: This does not behave as expected if Clone has been
+		// 			loaded with the cache option set to true. Epsilon
+		//			implements its own cache, which evicts elements when
+		//			they are moved into a new resource. Sadly, it does
+		// 			not seem straightforward to add them back, so no cache! :(
+		if (p.name <> RoboArch!System.all.first().name) {
+			printDebug("Making: " + newURI);
+			var rs = rsset.createResource(newURI,null);
+			rs.getContents().add(p);
+		}
+	}
+
+	for (r in RoboChart.getResource().getResourceSet().getResources()) {
+		printDebug("Saving: " + r.getURI());
+		r.save(null);
+	}
+	
+	//printDebug("//-[End of Saving resources]//-");
+//	var input = RoboArch!System.all.first();
+//	printDebug("Input system name: " + input.name);
+//	
+//	var rs = mainResource.getResourceSet();
+//	var mainUri = mainResource.getURI();
+//	var folderUri = mainUri.trimsegments(1);
+//	("Output Folder: " + folderUri).println();
+//	var uri = RoboChart.getResource().getURI();
+//	var resourcesToSave = Set{};
+//	for (p in RoboChart!RCPackage) {
+//		if (p.name != input.name) {
+//			var uri = folderUri.appendSegment(p.name + ".rct");
+//			("Adding " + p.name + " to " + uri).println();
+//			var r = rs.createResource(uri);
+//			r.getContents().add(p);
+//			("p.eResource(): " + p.eResource()).println();
+//			resourcesToSave.add(r);
+//		} else {
+//			mainResource.getContents().add(p);
+//			resourcesToSave.add(mainResource);
+//		}
+//	}
+////	var util = new Native("org.eclipse.xtext.EcoreUtil2");
+////	//printDebug("Giving live scope");
+////	util.resolveAll(rs);
+//	RoboChart.getResource().getResourceSet().getResources().println();
+//	for (r in RoboChart.getResource().getResourceSet().getResources()) {
+//		("Saving " + r).println();
+//		r.resolveLazyCrossReferences(null);
+//		r.save(null);
+//	}
+//	mainResource.resolveLazyCrossReferences(null);
+//	mainResource.save(null);
+//	printDebug("Complete.");
 }
 
 
 rule SystemToRCModule
 	transform amsys: RoboArch!System
 	to rcsysPkg: RoboChart!RCPackage,
-		rcdefsPkg: RoboChart!RCPackage{
+		rcdefsPkg: RoboChart!RCPackage {
 		
 		rcdefsPkg.name = DefinitionsName();
 		
 		//Where
 		var cLayer = amsys.layers.select( lyr | lyr.isTypeOf(RoboArch!ControlLayer) );
-
-		if ( amsys.robot.size() < 1 ) {
-			if ( (amsys.robot.operations.size() > 0) or (amsys.robot.interfaces.size() > 0) or 
-			     (amsys.robot.pinterfaces.size() > 0) or (amsys.robot.variableList.size() > 0) ) {
-				var roboticPlatform = amsys.robot.equivalent();
-				
-			} else {
-				var roboticPlatform = roboticPlatform.add(ControlLayerToRoboticPlatform(cLayer));
-			}
-		}		 
+		printDebug(amsys.robot);
+		var roboticPlatform;
+		if ( (amsys.robot.operations.size() > 0) or (amsys.robot.interfaces.size() > 0) or 
+		     (amsys.robot.pinterfaces.size() > 0) or (amsys.robot.variableList.size() > 0) ) {
+		    printDebug("Adding robotic platform: " + amsys.robot);
+			roboticPlatform = amsys.robot.equivalent();
+			printDebug("roboticPlatform: " + roboticPlatform);
+		} else {
+			printDebug("Adding robotic platform based on controller: " + cLayer);
+			roboticPlatform = roboticPlatform.add(ControlLayerToRoboticPlatform(cLayer));
+		}
 
 		
 		//Definitions
-		var rcdefs = amsys.definitions.equivalent();
+		rcdefsPkg.types = amsys.definitions.equivalent();
 						for (lyr: RoboArch!Layer in amsys.layers){
-							rcdefs.addAll( LayerToTypes(lyr) );
+							rcdefsPkg.types.addAll( LayerToTypes(lyr) );
 						}
+		printDebug("Definitions: " + rcdefsPkg.types);
 						
 		//Functions
-		var rcfuns = amsys.functions.equivalent();
+		rcdefsPkg.functions = amsys.functions.equivalent();
 						for (lyr: RoboArch!Layer in amsys.layers){
-							rcfuns.addAll( LayerToFunctions(lyr) );
+							rcdefsPkg.functions.addAll( LayerToFunctions(lyr) );
 						}
+		printDebug("Functions: " + rcdefsPkg.functions);
 					
 		//Interfaces	
-		var rcifs = amsys.interfaces.equivalent();
+		rcdefsPkg.interfaces = amsys.interfaces.equivalent();
 						for (lyr: RoboArch!Layer in amsys.layers){
-							rcifs.addAll( LayerToInterface(lyr) );
+							rcdefsPkg.interfaces.addAll( LayerToInterface(lyr) );
 						}
+		printDebug("Interfaces: " + rcdefsPkg.interfaces);
 		
 		//Module
 		var rcmod = new RoboChart!RCModule;
@@ -84,26 +165,22 @@ rule SystemToRCModule
 			rcmod.name = amsys.name;
 			
 			//Module nodes = the union of controllers and the roboticplatform
-			rcmod.nodes = LayersToControllers( amsys.layers );
-							rcmod.nodes.addAll(roboticPlatform);
+			printDebug(amsys.layers);
+			rcmod.nodes = amsys.layers.equivalent("PlanningLayerToControllerRef", "ExecutiveLayerToControllerRef", "ControlLayerToControllerRef", "GenericLayerToControllerRef");
+			var n = 0;
+			for (node in rcmod.nodes) {
+				node.name = "ctrl_ref" + n;
+				n = n+1;
+			}
+			printDebug("Robotic platform: " + roboticPlatform);
+			rcmod.nodes.add(roboticPlatform);
 
 			printDebugControllerSummary(rcmod.nodes);
 			
 			rcmod.connections = amsys.connections.equivalent();
 		
-	
-		//Populate types package
-		rcdefs.remove(null);
-		rcifs.remove(null);
-		rcfuns.remove(null);
-		
-		rcdefsPkg.types = rcdefs;
-		rcdefsPkg.interfaces = rcifs;
-		rcdefsPkg.functions = rcfuns;
-		
 		//Populate system package
-		rcsysPkg.name = amsys.name;		
-		rcsysPkg.imports.add( getPackageImport(DefinitionsName()) );
+		rcsysPkg.name = amsys.name;
 		
 		if( amsys.layers.exists( lyr | lyr.isTypeOf(RoboArch!ControlLayer) and lyr.pattern.isDefined() ) ){
 			rcsysPkg.imports.add( getPackageImport(PlatformName()) );
@@ -111,59 +188,239 @@ rule SystemToRCModule
 		for(lyr: RoboArch!Layer in amsys.layers){
 			rcsysPkg.imports.add( getPackageImport(lyr.name.toLowerCase().firstToUpperCase() ) );
 		}
+		rcsysPkg.imports.add( getPackageImport( DefinitionsName() ) );
 		
 		rcsysPkg.modules.add(rcmod);
 		
+//		var rs = rcdefsPkg.eResource().getResourceSet();
+//		var uri = rcdefsPkg.eResource().getUri().trimSegments(1).appendSegment(rcdefsPkg.name + ".rct");
+//		var r = rs.createResource(uri);
+//		r.getContents().add(rcdefsPkg);
+	}
+	
+@lazy
+rule RoboticPlatformRefToRoboticPlatformRef
+	transform rarpr: RoboArch!RoboticPlatformRef
+	to rcrpr: RoboChart!RoboticPlatformRef
+	extends NamedElementToNamedElement {
+		printDebug("Start");
+	
+		rcrpr.ref = rarpr.ref.equivalent();
+	}
+	
+@abstract
+rule BasicContextToBasicContext
+	transform ractxt: RoboArch!BasicContext
+	to rcctxt: RoboChart!BasicContext {
+		printDebug("Start");
+	
+		rcctxt.variableList = ractxt.variableList.equivalent();
+		rcctxt.operations = ractxt.operations.equivalent();
+		rcctxt.events = ractxt.events.equivalent();
+		rcctxt.clocks = ractxt.clocks.equivalent();
+		
+		
 	}
 
+@abstract
+rule ContextToContext
+	transform ractxt: RoboArch!RoboticPlatformDef
+	to rcctxt: RoboChart!RoboticPlatformDef
+	extends BasicContextToBasicContext {
+		printDebug("Start");
+		
+		rcctxt.pInterfaces = ractxt.pInterfaces.equivalent();
+		rcctxt.rInterfaces = ractxt.rInterfaces.equivalent();
+		rcctxt.interfaces = ractxt.interfaces.equivalent();
+	}
+	
+@lazy
+rule RoboticPlatformDefToRoboticPlatformDef
+	transform rarpd: RoboArch!RoboticPlatformDef
+	to rcrpd: RoboChart!RoboticPlatformDef
+	extends ContextToContext {
+		printDebug("Start");
+		
+		rcrpd.name = rarpd.name;
+	}
+	
+@lazy
+rule InterfaceToInterface
+	transform raifc: RoboArch!Interface
+	to rcifc: RoboChart!Interface
+	extends BasicContextToBasicContext {
+		printDebug("Start - " + raifc.name);
+		
+		rcifc.name = raifc.name;
+	}
+	
+@abstract
+rule LayerToControllerRef
+	transform amlyr: RoboArch!Layer 
+	to rcctrl: RoboChart!ControllerRef {
+		printDebug("Start - " + amlyr.name);
+		rcctrl.ref = amlyr.equivalent("PlanningLayerToControllerDef", "ExecutiveLayerToControllerDef", "ControlLayerToControllerDef", "GenericLayerToControllerDef");
+	}
+@lazy
+rule PlanningLayerToControllerRef
+	transform amlyr: RoboArch!PlanningLayer 
+	to rcctrl: RoboChart!ControllerRef 
+	extends LayerToControllerRef {
+	}
+@lazy
+rule ExecutiveLayerToControllerRef
+	transform amlyr: RoboArch!ExecutiveLayer 
+	to rcctrl: RoboChart!ControllerRef 
+	extends LayerToControllerRef {
+	}
+@lazy
+rule ControlLayerToControllerRef
+	transform amlyr: RoboArch!ControlLayer 
+	to rcctrl: RoboChart!ControllerRef 
+	extends LayerToControllerRef {
+	}
+@lazy
+rule GenericLayerToControllerRef
+	transform amlyr: RoboArch!GenericLayer 
+	to rcctrl: RoboChart!ControllerRef 
+	extends LayerToControllerRef {
+	}
 
+@abstract
+rule LayerToControllerDef
+	transform amlyr: RoboArch!Layer 
+	to rcctrl: RoboChart!ControllerDef {
+		printDebug("Start - " + amlyr.name);
+
+		rcctrl.name = amlyr.name;
+		
+		rcctrl.events = Sequence{};
+		increaseDebug();
+		rcctrl.events.addAll(amlyr.inputs.equivalent());
+		rcctrl.events.addAll(amlyr.outputs.equivalent());
+		decreaseDebug();
+		
+		increaseDebug();
+		var stmsConns = LayerToStateMachinesAndConnections(amlyr);
+		rcctrl.machines = stmsConns.machines;
+		rcctrl.connections = stmsConns.connections;
+		decreaseDebug();
+		
+		if (amlyr.isKindOf(RoboArch!ControlLayer) or amlyr.isKindOf(RoboArch!GenericLayer)) {
+			increaseDebug();
+			rcctrl.interfaces = amlyr.interfaces.equivalent();
+			decreaseDebug();
+			printDebug("Interfaces: " + rcctrl.interfaces);
+			for (iface in rcctrl.interfaces) {
+				printDebug("\t" + iface + " - " + iface.eContainer());
+			}
+			increaseDebug();
+			rcctrl.rInterfaces = amlyr.rinterfaces.equivalent();
+			decreaseDebug();
+			printDebug("Required Interfaces: " + rcctrl.rInterfaces);
+		} else {
+			rcctrl.interfaces = Set{};
+			rcctrl.rInterfaces = Set{};
+		}
+		
+		// make controller package
+		var rcpkg = new RoboChart!RCPackage;
+		rcpkg.name = amlyr.name.toLowerCase().firstToUpperCase();
+		rcpkg.controllers = Set{};
+		rcpkg.controllers.add(rcctrl);
+		
+		var packageImport = new RoboChart!Import;
+		packageImport.importedNamespace = amlyr.eContainer().name + rc_importall();
+		printDebug(rcpkg.name + ": adding import of " + packageImport.importedNamespace);
+		rcpkg.imports.add( packageImport );
+		rcpkg.imports.addAll(stmsConns.imports);
+		
+	}
+@lazy
+rule PlanningLayerToControllerDef
+	transform amlyr: RoboArch!PlanningLayer 
+	to rcctrl: RoboChart!ControllerDef 
+	extends LayerToControllerDef {
+	}
+@lazy
+rule ExecutiveLayerToControllerDef
+	transform amlyr: RoboArch!ExecutiveLayer 
+	to rcctrl: RoboChart!ControllerDef 
+	extends LayerToControllerDef {
+	}
+@lazy
+rule ControlLayerToControllerDef
+	transform amlyr: RoboArch!ControlLayer 
+	to rcctrl: RoboChart!ControllerDef 
+	extends LayerToControllerDef {
+	}
+@lazy
+rule GenericLayerToControllerDef
+	transform amlyr: RoboArch!GenericLayer 
+	to rcctrl: RoboChart!ControllerDef 
+	extends LayerToControllerDef {
+	}
 
 /*************************
  *  Empty Layers
  **************************/
-  
  
-@abstract
-rule EmptyLayerToController 
-	transform amlyr: RoboArch!Layer
-	to rchtnc: RoboChart!ControllerRef {
+//@abstract
+//rule EmptyLayerToController 
+//	transform amlyr: RoboArch!Layer
+//	to rchtnc: RoboChart!ControllerRef {
+//	
+//		guard : amlyr.pattern == null
+//		
+//		printDebug("Start");
+//
+//		//TODO generate htn planning robochart model
+//		var controller = new RoboChart!ControllerDef;
+//		controller.name = amlyr.name.toLowerCase().firstToUpperCase();
+//		
+//		var package = new RoboChart!RCPackage;
+//		package.name = amlyr.name.toLowerCase().firstToUpperCase();
+//		package.controllers.add(controller);
+//		
+//		rchtnc.populateControllerRef(controller);
+//	}
+//	
+//@lazy
+//rule EmptyControlLayerToController
+//	transform amlyr: RoboArch!ControlLayer
+//	to rcclyr: RoboChart!ControllerRef
+//	extends EmptyLayerToController{
+//	}
+//
+//@lazy
+//rule EmptyExecutiveLayerToController
+//	transform amlyr: RoboArch!ExecutiveLayer
+//	to rcclyr: RoboChart!ControllerRef
+//	extends EmptyLayerToController{
+//	}
+//
+//@lazy
+//rule EmptyPlanningLayerToController
+//	transform amlyr: RoboArch!PlanningLayer
+//	to rcclyr: RoboChart!ControllerRef
+//	extends EmptyLayerToController{
+//	}
+
+
+@lazy
+rule ConnectionToConnection
+	transform amctn: RoboArch!Connection
+	to rcctn: RoboChart!Connection {
 	
-		guard : amlyr.pattern == null
-		
-		printDebug("Start");
-
-		//TODO generate htn planning robochart model
-		var controller = new RoboChart!ControllerDef;
-		controller.name = amlyr.name.toLowerCase().firstToUpperCase();
-		
-		var package = new RoboChart!RCPackage;
-		package.name = amlyr.name.toLowerCase().firstToUpperCase();
-		package.controllers.add(controller);
-		
-		rchtnc.populateControllerRef(controller);
+		rcctn.efrom = amctn.efrom.equivalent();
+		rcctn.eto = amctn.eto.equivalent();
+		rcctn.from = amctn.from.equivalent("RoboticPlatformRefToRoboticPlatformRef", "RoboticPlatformDefToRoboticPlatformDef", 
+			"PlanningLayerToControllerRef", "ExecutiveLayerToControllerRef", "ControlLayerToControllerRef", "GenericLayerToControllerRef");
+		rcctn.`to` = amctn.`to`.equivalent("RoboticPlatformRefToRoboticPlatformRef", "RoboticPlatformDefToRoboticPlatformDef",
+			"PlanningLayerToControllerRef", "ExecutiveLayerToControllerRef", "ControlLayerToControllerRef", "GenericLayerToControllerRef");
+		rcctn.`async` = amctn.`async`;
+		rcctn.bidirec = amctn.bidirec;
 	}
-	
-@lazy
-rule EmptyControlLayerToController
-	transform amlyr: RoboArch!ControlLayer
-	to rcclyr: RoboChart!ControllerRef
-	extends EmptyLayerToController{
-	}
-
-@lazy
-rule EmptyExecutiveLayerToController
-	transform amlyr: RoboArch!ExecutiveLayer
-	to rcclyr: RoboChart!ControllerRef
-	extends EmptyLayerToController{
-	}
-
-@lazy
-rule EmptyPlanningLayerToController
-	transform amlyr: RoboArch!PlanningLayer
-	to rcclyr: RoboChart!ControllerRef
-	extends EmptyLayerToController{
-	}
-
 
  
 /* 
@@ -260,13 +517,13 @@ rule PlanningLayerToController
  		rcne.name = rpne.name;
  	}
  	
-  @abstract
+ @abstract
  rule TypedNamedElementToTypedNamedElement
  	transform ratn: RoboArch!NamedElement
  	to rctn: RoboChart!NamedElement
 	extends NamedElementToNamedElement{
  		
- 		rctn.type = ratn.type.equivalent().clone();
+ 		rctn.type = ratn.type.equivalent();
  	}
 	
 @lazy
@@ -274,8 +531,11 @@ rule PrimitiveTypeToPrimitiveType
 	transform rppt: RoboArch!PrimitiveType
 	to rcpt: RoboChart!PrimitiveType 
 	extends NamedElementToNamedElement{
-	
-		printDebug("Start" + rppt.name);
+		
+		// don't translate platform types
+		guard : not rppt.eResource().getURI().isPlatformPlugin()
+		
+		printDebug("Start " + rppt.name);
 		//Handled by the abstract rule
 	}
 
@@ -285,7 +545,7 @@ rule RecordTypeToRecordType
 	to rcrt: RoboChart!RecordType
 	extends NamedElementToNamedElement{
 	
-		printDebug("Start");
+		printDebug("Start - " + rprt.name);
 		
 		increaseDebug();
 		rcrt.fields = rprt.fields.equivalent();
@@ -348,8 +608,21 @@ rule ParameterToParameter
 	
 		// Handled by the abstract rule
 	}
+	
+@lazy
+rule OperationSigToOperationSig
+	transform raop: RoboArch!OperationSig
+	to rcop: RoboChart!OperationSig
+	extends NamedElementToNamedElement {
+		printDebug("Start " + raop.name);
+		
+		rcop.terminates = raop.terminates;
+		rcop.parameters = raop.parameters.equivalent();
+		rcop.preconditions = raop.preconditions.equivalent();
+		rcop.postconditions = raop.postconditions.equivalent();
+	}
 
-//@lazy
+@lazy
 rule EventToEvent
 	transform rpev: RoboArch!Event
 	to rcev: RoboChart!Event 
@@ -370,9 +643,39 @@ rule TypeRefToTypeRef
 		/* When called via equivalent only the same reference is returned each time
 		   therefore ensure the TypeRef returned by equivalent is cloned. */
 		
-		printDebug("Startv - " + rptr.ref.name + ":" + rptr.ref.type.name);
+		rptr.ref.equivalent();
 		
-		increaseDebug();
-		rctr.ref = rptr.ref.equivalent(); 
-		decreaseDebug();
+		printDebug("Start - " + rptr.ref.name + " - " + rptr.ref.eResource());
+		
+		
+		if (rptr.ref.eResource().getURI().isPlatformPlugin()) {
+			// probably from the RoboChart library, copy the reference as-is
+			printDebug("Copying RoboChart library type");
+			rctr.ref = rptr.ref;
+		} else {
+			increaseDebug();
+			rctr.ref = rptr.ref.equivalent(); 
+			decreaseDebug();
+		}
+		
+		printDebug("End - " + rctr.ref.name + " - " + rctr.ref.eResource());
+	}
+	
+	
+@lazy
+rule SeqTypeToSeqType
+	transform rast: RoboArch!SeqType
+	to rcst: RoboChart!SeqType {
+		printDebug("Start");
+		rcst.domain = rast.domain.equivalent();
+	}
+
+@lazy
+rule ProductTypeToProductType
+	transform rapt: RoboArch!ProductType
+	to rcpt: RoboChart!ProductType {
+		printDebug("Start");
+		printDebug(rapt.types);
+		rcpt.types = rapt.types.equivalent();
+		printDebug(rcpt.types);
 	}

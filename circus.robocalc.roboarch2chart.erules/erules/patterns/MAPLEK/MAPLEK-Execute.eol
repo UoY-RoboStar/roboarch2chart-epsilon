@@ -1,0 +1,119 @@
+/********************************************************************************
+ * Copyright (c) 2025 University of York and others
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0.
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ *
+ * Contributors:
+ *   James Baxter - initial definition
+ ********************************************************************************/
+
+import "../../common/RoboChart.eol";
+
+operation ExecuteStateMachine(analyse: RoboArch!ExecuteComponent, amptn: RoboArch!MAPLEK, lyrName: String): RoboChart!StateMachineDef {
+	var result = new RoboChart!StateMachineDef;
+	
+	result.name = lyrName + "_Execute";
+	
+	// add PlanData_events interface
+	var PlanDataEventsIface = ref(lyrName + "_PlanData_events", RoboChart!Interface);
+	result.interfaces.add(PlanDataEventsIface);
+	
+	// add Outputs interface
+	var OutputsIface = ref(lyrName + "_Outputs", RoboChart!Interface);
+	result.interfaces.add(OutputsIface);
+	
+	// make executePlan event
+	var executePlan = CreateRCEvent("executePlan");
+	result.events.add(executePlan);	
+	var adaptationCompleted;
+	
+	if (amptn.analyse <> null) {
+		// make adaptationCompleted event
+		adaptationCompleted = CreateRCEvent("adaptationCompleted");
+		result.events.add(adaptationCompleted);
+	}
+	
+	// create states and junctions
+	var i0 = new RoboChart!Initial;
+	i0.name = "i0";
+	result.nodes.add(i0);
+	
+	var Initialise = new RoboChart!State;
+	Initialise.name = "Initialise";
+	result.nodes.add(Initialise);
+	
+	var WaitForSignal = new RoboChart!State;
+	WaitForSignal.name = "WaitForSignal";
+	result.nodes.add(WaitForSignal);
+	
+	var SendOutputs = new RoboChart!State;
+	SendOutputs.name = "SendOutputs";
+	result.nodes.add(SendOutputs);
+	
+	var FinishAdaptation = new RoboChart!State;
+	FinishAdaptation.name = "FinishAdaptation";
+	result.nodes.add(FinishAdaptation);
+	
+	// create transitions
+	var t = new RoboChart!Transition;
+	t.name = "t0";
+	t.source = i0;
+	t.target = Initialise;
+	result.transitions.add(t);
+	
+	var t = new RoboChart!Transition;
+	t.name = "t1";
+	t.source = Initialise;
+	t.target = WaitForSignal;
+	result.transitions.add(t);
+	
+	var t = new RoboChart!Transition;
+	t.name = "t2";
+	t.source = WaitForSignal;
+	t.target = SendOutputs;
+	// trigger: executePlan
+	var trigger = new RoboChart!Communication;
+	trigger.event = executePlan;
+	trigger._type = RoboChart!CommunicationType#SIMPLE;
+	t.trigger = trigger;
+	result.transitions.add(t);
+	
+	var t = new RoboChart!Transition;
+	t.name = "t3";
+	t.source = SendOutputs;
+	t.target = FinishAdaptation;
+	if (amptn.analyse <> null) {
+		// action: adaptationCompleted
+		var action = new RoboChart!CommunicationStmt;
+		action.communication = new RoboChart!Communication;
+		action.communication.event = adaptationCompleted;
+		action.communication._type = RoboChart!CommunicationType#SIMPLE;
+		t.action = action;
+	}
+	result.transitions.add(t);
+	
+	var t = new RoboChart!Transition;
+	t.name = "t4";
+	t.source = FinishAdaptation;
+	t.target = WaitForSignal;
+	result.transitions.add(t);
+	
+	// make state machine package
+	var rcpkg = new RoboChart!RCPackage;
+	rcpkg.name = result.name;
+	rcpkg.machines = Set{};
+	rcpkg.machines.add(result);
+	
+	var packageImport = new RoboChart!Import;
+	packageImport.importedNamespace = DefinitionsName() + rc_importall();
+	printDebug(rcpkg.name + ": adding import of " + packageImport.importedNamespace);
+	rcpkg.imports.add( packageImport );
+	
+	return result;
+}
+	
+	

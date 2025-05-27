@@ -1,0 +1,323 @@
+/********************************************************************************
+ * Copyright (c) 2025 University of York and others
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0.
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ *
+ * Contributors:
+ *   James Baxter - initial definition
+ ********************************************************************************/
+
+import "../../common/RoboChart.eol";
+
+operation RecordedDataInterfaces(rdvr: Set(RoboArch!Variable), pat: RoboArch!MAPLEK, name: String): Set(RoboChart!Interface) {
+	var result = Set{};
+	
+	// RecordedData
+	var recordedDataIface = new RoboChart!Interface;
+	recordedDataIface.name = name + "_RecordedData";
+	for (v in rdvr) {
+		var vl = new RoboChart!VariableList;
+		vl.modifier = RoboChart!VariableModifier#VAR;
+		var newVar = CreateRCVariable(v.name, v.type.clone());
+		vl.vars.add(newVar);
+		recordedDataIface.variableList.add(vl);
+	}
+	result.add(recordedDataIface);
+
+	// RecordedData_events
+	var recordedDataEventsIface = new RoboChart!Interface;
+	recordedDataEventsIface.name = name + "_RecordedData_events";
+	for (v in rdvr) {
+		var ev = CreateRCEvent(v.name , v.type.clone());
+		recordedDataEventsIface.events.add(ev);
+		var ev = CreateRCEvent("get_" + v.name);
+		recordedDataEventsIface.events.add(ev);
+	}
+	result.add(recordedDataEventsIface);
+	
+	// RecordedData_set_events
+	var recordedDataSetEventsIface = new RoboChart!Interface;
+	recordedDataSetEventsIface.name = name + "_RecordedData_set_events";
+	for (v in rdvr) {
+		var ev = CreateRCEvent("set_" + v.name, v.type.clone());
+		recordedDataSetEventsIface.events.add(ev);
+	}
+	result.add(recordedDataSetEventsIface);
+	
+	// RecordedData_ext_events
+	var recordedDataExtEventsIface = new RoboChart!Interface;
+	recordedDataExtEventsIface.name = name + "_RecordedData_ext_events";
+	for (v in rdvr) {
+		var ev = CreateRCEvent(v.name + "_ext", v.type.clone());
+		recordedDataExtEventsIface.events.add(ev);
+		var ev = CreateRCEvent("get_" + v.name + "_ext");
+		recordedDataExtEventsIface.events.add(ev);
+	}
+	result.add(recordedDataExtEventsIface);
+	
+	// RecordedData_Analyse_events
+	if (pat.analyse != null) {
+		var recordedDataAnalyseEventsIface = new RoboChart!Interface;
+		recordedDataAnalyseEventsIface.name = name + "_RecordedData_Analyse_events";
+		for (v in rdvr) {
+			var ev = CreateRCEvent(v.name + "_Analyse", v.type.clone());
+			recordedDataAnalyseEventsIface.events.add(ev);
+			var ev = CreateRCEvent("get_" + v.name + "_Analyse");
+			recordedDataAnalyseEventsIface.events.add(ev);
+		}
+		result.add(recordedDataAnalyseEventsIface);
+	}
+	
+	// RecordedData_Plan_events
+	if (pat.plan != null) {
+		var recordedDataPlanEventsIface = new RoboChart!Interface;
+		recordedDataPlanEventsIface.name = name + "_RecordedData_Plan_events";
+		for (v in rdvr) {
+			var ev = CreateRCEvent(v.name + "_Plan", v.type.clone());
+			recordedDataPlanEventsIface.events.add(ev);
+			var ev = CreateRCEvent("get_" + v.name + "_Plan");
+			recordedDataPlanEventsIface.events.add(ev);
+		}
+		result.add(recordedDataPlanEventsIface);
+	}
+	
+	// RecordedData_Legitimate_events
+	if (pat.legitimate != null) {
+		var recordedDataLegitimateEventsIface = new RoboChart!Interface;
+		recordedDataLegitimateEventsIface.name = name + "_RecordedData_Legitimate_events";
+		for (v in rdvr) {
+			var ev = CreateRCEvent(v.name + "_Legitimate", v.type.clone());
+			recordedDataLegitimateEventsIface.events.add(ev);
+			var ev = CreateRCEvent("get_" + v.name + "_Legitimate");
+			recordedDataLegitimateEventsIface.events.add(ev);
+		}
+		result.add(recordedDataLegitimateEventsIface);
+	}
+	
+	return result;
+}
+
+operation AnalysisResultsInterfaces(arvr: Set(RoboArch!Variable), pat: RoboArch!MAPLEK, name: String): Set(RoboChart!Interface) {
+	var result = Set{};
+	
+	// AnalysisResults
+	var analysisResultsIface = new RoboChart!Interface;
+	analysisResultsIface.name = name + "_AnalysisResults";
+	for (v in arvr) {
+		var vl = new RoboChart!VariableList;
+		vl.modifier = RoboChart!VariableModifier#VAR;
+		var newVar = CreateRCVariable(v.name, v.type.clone());
+		vl.vars.add(newVar);
+		analysisResultsIface.variableList.add(vl);
+	}
+	result.add(analysisResultsIface);
+
+	// AnalysisResults_events
+	var analysisResultsEventsIface = new RoboChart!Interface;
+	analysisResultsEventsIface.name = name + "_AnalysisResults_events";
+	for (v in arvr) {
+		var ev = CreateRCEvent(v.name , v.type.clone());
+		analysisResultsEventsIface.events.add(ev);
+		var ev = CreateRCEvent("get_" + v.name);
+		analysisResultsEventsIface.events.add(ev);
+	}
+	result.add(analysisResultsEventsIface);
+	
+	// AnalysisResults_set_events
+	var analysisResultsSetEventsIface = new RoboChart!Interface;
+	analysisResultsSetEventsIface.name = name + "_AnalysisResults_set_events";
+	for (v in arvr) {
+		var ev = CreateRCEvent("set_" + v.name, v.type.clone());
+		analysisResultsSetEventsIface.events.add(ev);
+	}
+	result.add(analysisResultsSetEventsIface);
+	
+	// AnalysisResults_ext_events
+	var analysisResultsExtEventsIface = new RoboChart!Interface;
+	analysisResultsExtEventsIface.name = name + "_AnalysisResults_ext_events";
+	for (v in arvr) {
+		var ev = CreateRCEvent(v.name + "_ext", v.type.clone());
+		analysisResultsExtEventsIface.events.add(ev);
+		var ev = CreateRCEvent("get_" + v.name + "_ext");
+		analysisResultsExtEventsIface.events.add(ev);
+	}
+	result.add(analysisResultsExtEventsIface);
+	
+	// AnalysisResults_Plan_events
+	if (pat.plan != null) {
+		var analysisResultsPlanEventsIface = new RoboChart!Interface;
+		analysisResultsPlanEventsIface.name = name + "_AnalysisResults_Plan_events";
+		for (v in arvr) {
+			var ev = CreateRCEvent(v.name + "_Plan", v.type.clone());
+			analysisResultsPlanEventsIface.events.add(ev);
+			var ev = CreateRCEvent("get_" + v.name + "_Plan");
+			analysisResultsPlanEventsIface.events.add(ev);
+		}
+		result.add(analysisResultsPlanEventsIface);
+	}
+	
+	// AnalysisResults_Legitimate_events
+	if (pat.legitimate != null) {
+		var analysisResultsLegitimateEventsIface = new RoboChart!Interface;
+		analysisResultsLegitimateEventsIface.name = name + "_AnalysisResults_Legitimate_events";
+		for (v in arvr) {
+			var ev = CreateRCEvent(v.name + "_Legitimate", v.type.clone());
+			analysisResultsLegitimateEventsIface.events.add(ev);
+			var ev = CreateRCEvent("get_" + v.name + "_Legitimate");
+			analysisResultsLegitimateEventsIface.events.add(ev);
+		}
+		result.add(analysisResultsLegitimateEventsIface);
+	}
+	
+	return result;
+}
+
+operation PlanDataInterfaces(pdvr: Set(RoboArch!Variable), pat: RoboArch!MAPLEK, name: String): Set(RoboChart!Interface) {
+	var result = Set{};
+	
+	// PlanData
+	var planDataIface = new RoboChart!Interface;
+	planDataIface.name = name + "_PlanData";
+	for (v in pdvr) {
+		var vl = new RoboChart!VariableList;
+		vl.modifier = RoboChart!VariableModifier#VAR;
+		var newVar = CreateRCVariable(v.name, v.type.clone());
+		vl.vars.add(newVar);
+		planDataIface.variableList.add(vl);
+	}
+	result.add(planDataIface);
+
+	// PlanData_events
+	var planDataEventsIface = new RoboChart!Interface;
+	planDataEventsIface.name = name + "_PlanData_events";
+	for (v in pdvr) {
+		var ev = CreateRCEvent(v.name , v.type.clone());
+		planDataEventsIface.events.add(ev);
+		var ev = CreateRCEvent("get_" + v.name);
+		planDataEventsIface.events.add(ev);
+	}
+	result.add(planDataEventsIface);
+	
+	// PlanData_set_events
+	var planDataSetEventsIface = new RoboChart!Interface;
+	planDataSetEventsIface.name = name + "_PlanData_set_events";
+	for (v in pdvr) {
+		var ev = CreateRCEvent("set_" + v.name, v.type.clone());
+		planDataSetEventsIface.events.add(ev);
+	}
+	result.add(planDataSetEventsIface);
+	
+	// PlanData_ext_events
+	var planDataExtEventsIface = new RoboChart!Interface;
+	planDataExtEventsIface.name = name + "_PlanData_ext_events";
+	for (v in pdvr) {
+		var ev = CreateRCEvent(v.name + "_ext", v.type.clone());
+		planDataExtEventsIface.events.add(ev);
+		var ev = CreateRCEvent("get_" + v.name + "_ext");
+		planDataExtEventsIface.events.add(ev);
+	}
+	result.add(planDataExtEventsIface);
+	
+	// PlanData_Legitimate_events
+	if (pat.legitimate != null) {
+		var planDataLegitimateEventsIface = new RoboChart!Interface;
+		planDataLegitimateEventsIface.name = name + "_PlanData_Legitimate_events";
+		for (v in pdvr) {
+			var ev = CreateRCEvent(v.name + "_Legitimate", v.type.clone());
+			planDataLegitimateEventsIface.events.add(ev);
+			var ev = CreateRCEvent("get_" + v.name + "_Legitimate");
+			planDataLegitimateEventsIface.events.add(ev);
+		}
+		result.add(planDataLegitimateEventsIface);
+	}
+	
+	// PlanData_Execute_events
+	var planDataExecuteEventsIface = new RoboChart!Interface;
+	planDataExecuteEventsIface.name = name + "_PlanData_Execute_events";
+	for (v in pdvr) {
+		var ev = CreateRCEvent(v.name + "_Execute", v.type.clone());
+		planDataExecuteEventsIface.events.add(ev);
+		var ev = CreateRCEvent("get_" + v.name + "_Execute");
+		planDataExecuteEventsIface.events.add(ev);
+	}
+	result.add(planDataExecuteEventsIface);
+	
+	return result;
+}
+
+operation VerificationInfoInterfaces(vivr: Set(RoboChart!Variable), pat: RoboArch!MAPLEK, name: String): Set(RoboChart!Interface) {
+	var result = Set{};
+	
+	// VerificationInfo
+	var verificationInfoIface = new RoboChart!Interface;
+	verificationInfoIface.name = name + "_VerificationInfo";
+	for (v in vivr) {
+		var vl = new RoboChart!VariableList;
+		vl.modifier = RoboChart!VariableModifier#VAR;
+		var newVar = CreateRCVariable(v.name , v.type.clone());
+		vl.vars.add(newVar);
+		verificationInfoIface.variableList.add(vl);
+	}
+	result.add(verificationInfoIface);
+
+	// VerificationInfo_events
+	var verificationInfoEventsIface = new RoboChart!Interface;
+	verificationInfoEventsIface.name = name + "_VerificationInfo_events";
+	for (v in vivr) {
+		var ev = CreateRCEvent(v.name , v.type.clone());
+		verificationInfoEventsIface.events.add(ev);
+		var ev = CreateRCEvent("get_" + v.name);
+		verificationInfoEventsIface.events.add(ev);
+	}
+	result.add(verificationInfoEventsIface);
+	
+	// VerificationInfo_set_events
+	var verificationInfoSetEventsIface = new RoboChart!Interface;
+	verificationInfoSetEventsIface.name = name + "_VerificationInfo_set_events";
+	for (v in vivr) {
+		var ev = CreateRCEvent("set_" + v.name, v.type.clone());
+		verificationInfoSetEventsIface.events.add(ev);
+	}
+	result.add(verificationInfoSetEventsIface);
+	
+	// VerificationInfo_ext_events
+	var verificationInfoExtEventsIface = new RoboChart!Interface;
+	verificationInfoExtEventsIface.name = name + "_VerificationInfo_ext_events";
+	for (v in vivr) {
+		var ev = CreateRCEvent(v.name + "_ext", v.type.clone());
+		verificationInfoExtEventsIface.events.add(ev);
+		var ev = CreateRCEvent("get_" + v.name + "_ext");
+		verificationInfoExtEventsIface.events.add(ev);
+	}
+	result.add(verificationInfoExtEventsIface);
+	
+	// VerificationInfo_Plan_events
+	if (pat.plan != null) {
+		var verificationInfoPlanEventsIface = new RoboChart!Interface;
+		verificationInfoPlanEventsIface.name = name + "_VerificationInfo_Plan_events";
+		for (v in vivr) {
+			var ev = CreateRCEvent(v.name + "_Plan", v.type.clone());
+			verificationInfoPlanEventsIface.events.add(ev);
+			var ev = CreateRCEvent("get_" + v.name + "_Plan");
+			verificationInfoPlanEventsIface.events.add(ev);
+		}
+		result.add(verificationInfoPlanEventsIface);
+	}
+	
+	// VerificationInfo_Execute_events
+//	var verificationInfoExecuteEventsIface = new RoboChart!Interface;
+//	verificationInfoExecuteEventsIface.name = name + "_VerificationInfo_Execute_events";
+//	for (v in vivr) {
+//		var ev = CreateRCEvent(v.name + "_Execute", v.type.clone());
+//		verificationInfoExecuteEventsIface.events.add(ev);
+//		var ev = CreateRCEvent("get_" + v.name + "_Execute");
+//		verificationInfoExecuteEventsIface.events.add(ev);
+//	}
+//	result.add(verificationInfoExecuteEventsIface);
+	
+	return result;
+}

@@ -1,0 +1,223 @@
+/********************************************************************************
+ * Copyright (c) 2025 University of York and others
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0.
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ *
+ * Contributors:
+ *   James Baxter - initial definition
+ ********************************************************************************/
+
+import "../../common/RoboChart.eol";
+
+operation PlanStateMachine(plan: RoboArch!PlanComponent, amptn: RoboArch!MAPLEK, lyrName: String): RoboChart!StateMachineDef {
+	var result = new RoboChart!StateMachineDef;
+	
+	result.name = lyrName + "_Plan";
+	
+	// add PlanData_events interface
+	var PlanDataEventsIface = ref(lyrName + "_PlanData_events", RoboChart!Interface);
+	result.interfaces.add(PlanDataEventsIface);
+	
+	// add AnalysisResults_set_events interface
+	var PlanDataSetEventsIface = ref(lyrName + "_PlanData_set_events", RoboChart!Interface);
+	result.interfaces.add(PlanDataSetEventsIface);
+	
+	// add RecordedData_events interface
+	var RecordedDataEventsIface = ref(lyrName + "_RecordedData_events", RoboChart!Interface);
+	result.interfaces.add(RecordedDataEventsIface);
+	
+	// make planningCompleted event
+	var planningCompleted = CreateRCEvent("planningCompleted");
+	result.events.add(planningCompleted);
+	
+	var VerificationInfoEventsIface;
+	var planRejected;
+	if (amptn.legitimate <> null) {
+		// add VerificationInfo_events interface
+		VerificationInfoEventsIface = ref(lyrName + "_VerificationInfo_events", RoboChart!Interface);
+		result.interfaces.add(VerificationInfoEventsIface);
+		
+		// make planRejected event
+		planRejected = CreateRCEvent("planRejected");
+		result.events.add(planRejected);
+	}
+	
+	var AnalysisResultsEventsIface;
+	var requestPlan;
+	var data;
+	var processedData;
+	if (amptn.analyse <> null) {
+		// add AnalysisResults_events interface
+		AnalysisResultsEventsIface = ref(lyrName + "_AnalysisResults_events", RoboChart!Interface);
+		result.interfaces.add(AnalysisResultsEventsIface);
+		
+		// make requestPlan event
+		requestPlan = CreateRCEvent("requestPlan");
+		result.events.add(requestPlan);
+	} else {
+		// make data variable
+		var vl = new RoboChart!VariableList;
+		vl.modifier = RoboChart!VariableModifier#VAR;
+		data = CreateRCVariable("data", amptn.monitor.processedDataType.clone());
+		vl.vars.add(data);
+		result.variableList.add(vl);
+		
+		// make processedData event
+		processedData = CreateRCEvent("processedData", amptn.monitor.processedDataType.clone());
+		result.events.add(processedData);
+	}
+	
+	// create states and junctions
+	var i0 = new RoboChart!Initial;
+	i0.name = "i0";
+	result.nodes.add(i0);
+	
+	var Initialise = new RoboChart!State;
+	Initialise.name = "Initialise";
+	result.nodes.add(Initialise);
+	
+	var WaitForSignal = new RoboChart!State;
+	WaitForSignal.name = "WaitForSignal";
+	result.nodes.add(WaitForSignal);
+	
+	var MakePlan = new RoboChart!State;
+	MakePlan.name = "MakePlan";
+	result.nodes.add(MakePlan);
+	
+	var PlanMade = new RoboChart!State;
+	PlanMade.name = "PlanMade";
+	result.nodes.add(PlanMade);
+	
+	// create transitions
+	var t = new RoboChart!Transition;
+	t.name = "t0";
+	t.source = i0;
+	t.target = Initialise;
+	result.transitions.add(t);
+	
+	var t = new RoboChart!Transition;
+	t.name = "t1";
+	t.source = Initialise;
+	t.target = WaitForSignal;
+	result.transitions.add(t);
+	
+	var t = new RoboChart!Transition;
+	t.name = "t2";
+	t.source = WaitForSignal;
+	t.target = MakePlan;
+	if (amptn.analyse <> null) {		
+		// trigger: requestPlan
+		var trigger = new RoboChart!Communication;
+		trigger.event = requestPlan;
+		trigger._type = RoboChart!CommunicationType#SIMPLE;
+		t.trigger = trigger;
+	} else {
+		// trigger: processedData?data
+		var trigger = new RoboChart!Communication;
+		trigger.event = processedData;
+		trigger._type = RoboChart!CommunicationType#INPUT;
+		trigger.parameter = data;
+		t.trigger = trigger;
+	}
+	result.transitions.add(t);
+	
+	var t = new RoboChart!Transition;
+	t.name = "t3";
+	t.source = MakePlan;
+	t.target = PlanMade;
+	result.transitions.add(t);
+	
+	if (amptn.legitimate == null) {
+		// planningCompleted goes to WaitForSignal
+		var t = new RoboChart!Transition;
+		t.name = "t4";
+		t.source = PlanMade;
+		t.target = WaitForSignal;
+		// action: planningCompleted
+		var action = new RoboChart!CommunicationStmt;
+		action.communication = new RoboChart!Communication;
+		action.communication.event = planningCompleted;
+		action.communication._type = RoboChart!CommunicationType#SIMPLE;
+		t.action = action;
+		result.transitions.add(t);
+	} else {
+		// extra states for communication with legitimate
+		var WaitForVerification = new RoboChart!State;
+		WaitForVerification.name = "WaitForVerification";
+		result.nodes.add(WaitForVerification);
+		
+		var Replan = new RoboChart!State;
+		Replan.name = "Replan";
+		result.nodes.add(Replan);
+	
+		// planningCompleted goes to WaitForVerification
+		var t = new RoboChart!Transition;
+		t.name = "t4";
+		t.source = PlanMade;
+		t.target = WaitForVerification;
+		// action: planningCompleted
+		var action = new RoboChart!CommunicationStmt;
+		action.communication = new RoboChart!Communication;
+		action.communication.event = planningCompleted;
+		action.communication._type = RoboChart!CommunicationType#SIMPLE;
+		t.action = action;
+		result.transitions.add(t);
+	
+		// additional transitions for communication with legitimate
+		var t = new RoboChart!Transition;
+		t.name = "t5";
+		t.source = WaitForVerification;
+		t.target = MakePlan;
+		if (amptn.analyse <> null) {		
+			// trigger: requestPlan
+			var trigger = new RoboChart!Communication;
+			trigger.event = requestPlan;
+			trigger._type = RoboChart!CommunicationType#SIMPLE;
+			t.trigger = trigger;
+		} else {
+			// trigger: processedData?data
+			var trigger = new RoboChart!Communication;
+			trigger.event = processedData;
+			trigger._type = RoboChart!CommunicationType#INPUT;
+			trigger.parameter = data;
+			t.trigger = trigger;
+		}
+		result.transitions.add(t);
+		
+		var t = new RoboChart!Transition;
+		t.name = "t6";
+		t.source = WaitForVerification;
+		t.target = Replan;
+		// trigger: planRejected
+		var trigger = new RoboChart!Communication;
+		trigger.event = planRejected;
+		trigger._type = RoboChart!CommunicationType#SIMPLE;
+		t.trigger = trigger;
+		result.transitions.add(t);
+		
+		var t = new RoboChart!Transition;
+		t.name = "t7";
+		t.source = Replan;
+		t.target = PlanMade;
+		result.transitions.add(t);
+	}
+	
+	// make state machine package
+	var rcpkg = new RoboChart!RCPackage;
+	rcpkg.name = result.name;
+	rcpkg.machines = Set{};
+	rcpkg.machines.add(result);
+	
+	var packageImport = new RoboChart!Import;
+	packageImport.importedNamespace = DefinitionsName() + rc_importall();
+	printDebug(rcpkg.name + ": adding import of " + packageImport.importedNamespace);
+	rcpkg.imports.add( packageImport );
+	
+	return result;
+}
+	
+	

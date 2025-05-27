@@ -118,3 +118,11 @@ operation EObject clone(): Any{
 	return ecoreUtil.copy(self);
 
 }
+
+operation RoboArch!RoboticPlatform rpDef() : RoboArch!RoboticPlatformDef {
+	if (self.instanceOf(RoboArch!RoboticPlatformDef)) {
+		return self;
+	} else {
+		return self.ref;
+	}
+}

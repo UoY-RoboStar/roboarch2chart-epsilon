@@ -1,0 +1,188 @@
+/********************************************************************************
+ * Copyright (c) 2025 University of York and others
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0.
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ *
+ * Contributors:
+ *   James Baxter - initial definition
+ ********************************************************************************/
+
+import "../../common/RoboChart.eol";
+
+operation AnalyseStateMachine(analyse: RoboArch!AnalyseComponent, amptn: RoboArch!MAPLEK, lyrName: String): RoboChart!StateMachineDef {
+	var result = new RoboChart!StateMachineDef;
+	
+	result.name = lyrName + "_Analyse";
+	
+	// make data variable
+	var vl = new RoboChart!VariableList;
+	vl.modifier = RoboChart!VariableModifier#VAR;
+	var data = CreateRCVariable("data", amptn.monitor.processedDataType.clone());
+	vl.vars.add(data);
+	result.variableList.add(vl);
+	
+	// make anomalyDetected variable
+	var vl = new RoboChart!VariableList;
+	vl.modifier = RoboChart!VariableModifier#VAR;
+	var anomalyDetected = CreateRCVariable("anomalyDetected", RCTypeDefToRef(rc_type("boolean")));
+	vl.vars.add(anomalyDetected);
+	result.variableList.add(vl);
+	
+	// make awaitingAdaptation variable
+	var vl = new RoboChart!VariableList;
+	vl.modifier = RoboChart!VariableModifier#VAR;
+	var awaitingAdaptation = CreateRCVariable("awaitingAdaptation", RCTypeDefToRef(rc_type("boolean")));
+	vl.vars.add(awaitingAdaptation);
+	result.variableList.add(vl);
+	
+	// add AnalysisResults_events interface
+	var AnalysisResultsEventsIface = ref(lyrName + "_AnalysisResults_events", RoboChart!Interface);
+	result.interfaces.add(AnalysisResultsEventsIface);
+	
+	// add AnalysisResults_set_events interface
+	var AnalysisResultsSetEventsIface = ref(lyrName + "_AnalysisResults_set_events", RoboChart!Interface);
+	result.interfaces.add(AnalysisResultsSetEventsIface);
+	
+	// add RecordedData_events interface
+	var RecordedDataEventsIface = ref(lyrName + "_RecordedData_events", RoboChart!Interface);
+	result.interfaces.add(RecordedDataEventsIface);
+	
+	// make anomalyFound event
+	var anomalyFound = CreateRCEvent("anomalyFound");
+	result.events.add(anomalyFound);
+	
+	// make processedData event
+	var processedData = CreateRCEvent("processedData", amptn.monitor.processedDataType.clone());
+	result.events.add(processedData);
+	
+	// make adaptationCompleted event
+	var adaptationCompleted = CreateRCEvent("adaptationCompleted");
+	result.events.add(adaptationCompleted);
+	
+	// create states and junctions
+	var i0 = new RoboChart!Initial;
+	i0.name = "i0";
+	result.nodes.add(i0);
+	
+	var Initialise = new RoboChart!State;
+	Initialise.name = "Initialise";
+	result.nodes.add(Initialise);
+	
+	var WaitForData = new RoboChart!State;
+	WaitForData.name = "WaitForData";
+	result.nodes.add(WaitForData);
+	
+	var AnalyseAnomaly = new RoboChart!State;
+	AnalyseAnomaly.name = "AnalyseAnomaly";
+	result.nodes.add(AnalyseAnomaly);
+	
+	var AnalysisComplete = new RoboChart!State;
+	AnalysisComplete.name = "AnalysisComplete";
+	result.nodes.add(AnalysisComplete);
+	
+	// create transitions
+	var t = new RoboChart!Transition;
+	t.name = "t0";
+	t.source = i0;
+	t.target = Initialise;
+	result.transitions.add(t);
+	
+	var t = new RoboChart!Transition;
+	t.name = "t1";
+	t.source = Initialise;
+	t.target = WaitForData;
+	result.transitions.add(t);
+	
+	var t = new RoboChart!Transition;
+	t.name = "t2";
+	t.source = WaitForData;
+	t.target = WaitForData;
+	// trigger: adaptationCompleted
+	var trigger = new RoboChart!Communication;
+	trigger.event = adaptationCompleted;
+	trigger._type = RoboChart!CommunicationType#SIMPLE;
+	t.trigger = trigger;
+	// action: awaitingAdaptation = false
+	var action = new RoboChart!Assignment;
+	action.left = new RoboChart!VarRef;
+	action.left.name = awaitingAdaptation;
+	action.right = new RoboChart!BooleanExp;
+	action.right.value = "false";
+	t.action = action;
+	result.transitions.add(t);
+	
+	var t = new RoboChart!Transition;
+	t.name = "t3";
+	t.source = WaitForData;
+	t.target = AnalyseAnomaly;
+	// trigger: processedData?data
+	var trigger = new RoboChart!Communication;
+	trigger.event = processedData;
+	trigger._type = RoboChart!CommunicationType#INPUT;
+	trigger.parameter = data;
+	t.trigger = trigger;
+	result.transitions.add(t);
+	
+	var t = new RoboChart!Transition;
+	t.name = "t4";
+	t.source = AnalyseAnomaly;
+	t.target = AnalysisComplete;
+	result.transitions.add(t);
+	
+	var t = new RoboChart!Transition;
+	t.name = "t5";
+	t.source = AnalysisComplete;
+	t.target = WaitForData;
+	// guard: anomalyDetected
+	var condition = new RoboChart!RefExp;
+	condition.ref = anomalyDetected;
+	t.condition = condition;
+	// action: anomalyFound; awaitingAdaptation = true
+	var action = new RoboChart!SeqStatement;
+	action.statements = Sequence {};
+	// action1: anomalyFound
+	var action1 = new RoboChart!CommunicationStmt;
+	action1.communication = new RoboChart!Communication;
+	action1.communication.event = anomalyFound;
+	action1.communication._type = RoboChart!CommunicationType#SIMPLE;
+	action.statements.add(action1);
+	// action2: awaitingAdaptation = true
+	var action2 = new RoboChart!Assignment;
+	action2.left = new RoboChart!VarRef;
+	action2.left.name = awaitingAdaptation;
+	action2.right = new RoboChart!BooleanExp;
+	action2.right.value = "true";
+	action.statements.add(action2);
+	t.action = action;
+	result.transitions.add(t);
+	
+	var t = new RoboChart!Transition;
+	t.name = "t6";
+	t.source = AnalysisComplete;
+	t.target = WaitForData;
+	// guard: not anomalyDetected
+	var condition = new RoboChart!Not;
+	condition.exp = new RoboChart!RefExp;
+	condition.exp.ref = anomalyDetected;
+	t.condition = condition;
+	result.transitions.add(t);
+	
+	// make state machine package
+	var rcpkg = new RoboChart!RCPackage;
+	rcpkg.name = result.name;
+	rcpkg.machines = Set{};
+	rcpkg.machines.add(result);
+	
+	var packageImport = new RoboChart!Import;
+	packageImport.importedNamespace = DefinitionsName() + rc_importall();
+	printDebug(rcpkg.name + ": adding import of " + packageImport.importedNamespace);
+	rcpkg.imports.add( packageImport );
+	
+	return result;
+}
+	
+	

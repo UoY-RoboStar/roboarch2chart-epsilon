@@ -1,0 +1,564 @@
+/********************************************************************************
+ * Copyright (c) 2025 University of York and others
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0.
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ *
+ * Contributors:
+ *   James Baxter - initial definition
+ ********************************************************************************/
+
+import "../../common/RoboChart.eol";
+
+operation KnowledgeStateMachine(amptn: RoboArch!MAPLEK, lyrName: String): RoboChart!StateMachineDef {
+	var result = new RoboChart!StateMachineDef;
+	
+	result.name = lyrName + "_Knowledge";
+	
+	////////////////////////////////////
+	// Knowledge Variables Interfaces //
+	////////////////////////////////////
+	
+	// add RecordedData interface
+	var RecordedDataIface = ref(lyrName + "_RecordedData", RoboChart!Interface);
+	result.interfaces.add(RecordedDataIface);
+	
+	// add AnalysisResults interface
+	var AnalysisResultsIface = ref(lyrName + "_AnalysisResults", RoboChart!Interface);
+	result.interfaces.add(AnalysisResultsIface);
+	
+	// add PlanData interface
+	var PlanDataIface = ref(lyrName + "_PlanData", RoboChart!Interface);
+	result.interfaces.add(PlanDataIface);
+	
+	// add VerificationInfo interface
+	var VerificationInfoIface = ref(lyrName + "_VerificationInfo", RoboChart!Interface);
+	result.interfaces.add(VerificationInfoIface);
+	
+	////////////////////////////////////
+	// Knowledge States and Junctions //
+	////////////////////////////////////
+	
+	var i0 = new RoboChart!Initial;
+	i0.name = "i0";
+	result.nodes.add(i0);
+	
+	var KnowledgeState = new RoboChart!State;
+	KnowledgeState.name = "Knowledge";
+	result.nodes.add(KnowledgeState);
+	
+	var t = new RoboChart!Transition;
+	t.name = "t0";
+	t.source = i0;
+	t.target = KnowledgeState;
+	result.transitions.add(t);
+	
+	/////////////////////////////////////////////////
+	// Knowledge Events Interfaces and Transitions //
+	/////////////////////////////////////////////////
+	
+	// add RecordedData events and transitions
+	var RecordedDataEventsIface = ref(lyrName + "_RecordedData_events", RoboChart!Interface);
+	result.interfaces.add(RecordedDataEventsIface);
+	var RecordedDataSetEventsIface = ref(lyrName + "_RecordedData_set_events", RoboChart!Interface);
+	result.interfaces.add(RecordedDataSetEventsIface);
+	var RecordedDataExtEventsIface = ref(lyrName + "_RecordedData_ext_events", RoboChart!Interface);
+	result.interfaces.add(RecordedDataExtEventsIface);
+	for (v in RecordedDataIface.variableList.collect( vl | vl.vars).flatten()) {
+		// get_recordedData transitions
+		var t = new RoboChart!Transition;
+		t.name = v.name + "_get_trans";
+		t.source = KnowledgeState;
+		t.target = KnowledgeState;
+		// trigger: get_var
+		var trigger = new RoboChart!Communication;
+		trigger.event = RecordedDataEventsIface.events.select( ev | ev.name == ("get_" + v.name) ).first();
+		trigger._type = RoboChart!CommunicationType#SIMPLE;
+		t.trigger = trigger;
+		// action: var!var
+		var action = new RoboChart!CommunicationStmt;
+		action.communication = new RoboChart!Communication;
+		action.communication.event = RecordedDataEventsIface.events.select( ev | ev.name == v.name ).first();
+		action.communication._type = RoboChart!CommunicationType#OUTPUT;
+		action.communication.value = new RefExp;
+		action.communication.value.ref = v;
+		t.action = action;
+		result.transitions.add(t);
+		
+		// set_recordedData transitions
+		var t = new RoboChart!Transition;
+		t.name = v.name + "_set_trans";
+		t.source = KnowledgeState;
+		t.target = KnowledgeState;
+		// action: set_var?var
+		var trigger = new RoboChart!Communication;
+		trigger.event = RecordedDataSetEventsIface.events.select( ev | ev.name == ("set_" + v.name) ).first();
+		trigger._type = RoboChart!CommunicationType#INPUT;
+		trigger.value = new RefExp;
+		trigger.value.ref = v;
+		t.action = action;
+		result.transitions.add(t);
+		
+		// get_recordedData_ext transitions
+		var t = new RoboChart!Transition;
+		t.name = v.name + "_ext_trans";
+		t.source = KnowledgeState;
+		t.target = KnowledgeState;
+		// trigger: get_var_ext
+		var trigger = new RoboChart!Communication;
+		trigger.event = RecordedDataExtEventsIface.events.select( ev | ev.name == ("get_" + v.name + "_ext") ).first();
+		trigger._type = RoboChart!CommunicationType#SIMPLE;
+		t.trigger = trigger;
+		// action: var_ext!var
+		var action = new RoboChart!CommunicationStmt;
+		action.communication = new RoboChart!Communication;
+		action.communication.event = RecordedDataExtEventsIface.events.select( ev | ev.name == (v.name + "_ext") ).first();
+		action.communication._type = RoboChart!CommunicationType#OUTPUT;
+		action.communication.value = new RefExp;
+		action.communication.value.ref = v;
+		t.action = action;
+		result.transitions.add(t);
+	}
+	if (amptn.analyse <> null) {
+		var RecordedDataAnalyseEventsIface = ref(lyrName + "_RecordedData_Analyse_events", RoboChart!Interface);
+		result.interfaces.add(RecordedDataAnalyseEventsIface);
+	
+		for (v in RecordedDataIface.variableList.collect( vl | vl.vars).flatten()) {
+			// get_recordedData_Analyse transitions
+			var t = new RoboChart!Transition;
+			t.name = v.name + "_get_Analyse_trans";
+			t.source = KnowledgeState;
+			t.target = KnowledgeState;
+			// trigger: get_var
+			var trigger = new RoboChart!Communication;
+			trigger.event = RecordedDataAnalyseEventsIface.events.select( ev | ev.name == ("get_" + v.name + "_Analyse") ).first();
+			trigger._type = RoboChart!CommunicationType#SIMPLE;
+			t.trigger = trigger;
+			// action: var!var
+			var action = new RoboChart!CommunicationStmt;
+			action.communication = new RoboChart!Communication;
+			action.communication.event = RecordedDataAnalyseEventsIface.events.select( ev | ev.name == (v.name  + "_Analyse") ).first();
+			action.communication._type = RoboChart!CommunicationType#OUTPUT;
+			action.communication.value = new RefExp;
+			action.communication.value.ref = v;
+			t.action = action;
+			result.transitions.add(t);
+		}
+	}
+	if (amptn.plan <> null) {
+		var RecordedDataPlanEventsIface = ref(lyrName + "_RecordedData_Plan_events", RoboChart!Interface);
+		result.interfaces.add(RecordedDataPlanEventsIface);
+	
+		for (v in RecordedDataIface.variableList.collect( vl | vl.vars).flatten()) {
+			// get_recordedData_Plan transitions
+			var t = new RoboChart!Transition;
+			t.name = v.name + "_get_Plan_trans";
+			t.source = KnowledgeState;
+			t.target = KnowledgeState;
+			// trigger: get_var
+			var trigger = new RoboChart!Communication;
+			trigger.event = RecordedDataPlanEventsIface.events.select( ev | ev.name == ("get_" + v.name + "_Plan") ).first();
+			trigger._type = RoboChart!CommunicationType#SIMPLE;
+			t.trigger = trigger;
+			// action: var!var
+			var action = new RoboChart!CommunicationStmt;
+			action.communication = new RoboChart!Communication;
+			action.communication.event = RecordedDataPlanEventsIface.events.select( ev | ev.name == (v.name  + "_Plan") ).first();
+			action.communication._type = RoboChart!CommunicationType#OUTPUT;
+			action.communication.value = new RefExp;
+			action.communication.value.ref = v;
+			t.action = action;
+			result.transitions.add(t);
+		}
+	}
+	if (amptn.legitimate <> null) {
+		var RecordedDataLegitimateEventsIface = ref(lyrName + "_RecordedData_Legitimate_events", RoboChart!Interface);
+		result.interfaces.add(RecordedDataLegitimateEventsIface);
+	
+		for (v in RecordedDataIface.variableList.collect( vl | vl.vars).flatten()) {
+			// get_recordedData_Legitimate transitions
+			var t = new RoboChart!Transition;
+			t.name = v.name + "_get_Legitimate_trans";
+			t.source = KnowledgeState;
+			t.target = KnowledgeState;
+			// trigger: get_var
+			var trigger = new RoboChart!Communication;
+			trigger.event = RecordedDataLegitimateEventsIface.events.select( ev | ev.name == ("get_" + v.name + "_Legitimate") ).first();
+			trigger._type = RoboChart!CommunicationType#SIMPLE;
+			t.trigger = trigger;
+			// action: var!var
+			var action = new RoboChart!CommunicationStmt;
+			action.communication = new RoboChart!Communication;
+			action.communication.event = RecordedDataLegitimateEventsIface.events.select( ev | ev.name == (v.name  + "_Legitimate") ).first();
+			action.communication._type = RoboChart!CommunicationType#OUTPUT;
+			action.communication.value = new RefExp;
+			action.communication.value.ref = v;
+			t.action = action;
+			result.transitions.add(t);
+		}
+	}
+	
+	// add AnalysisResults events and transitions
+	var AnalysisResultsEventsIface = ref(lyrName + "_AnalysisResults_events", RoboChart!Interface);
+	result.interfaces.add(AnalysisResultsEventsIface);
+	var AnalysisResultsSetEventsIface = ref(lyrName + "_AnalysisResults_set_events", RoboChart!Interface);
+	result.interfaces.add(AnalysisResultsSetEventsIface);
+	var AnalysisResultsExtEventsIface = ref(lyrName + "_AnalysisResults_ext_events", RoboChart!Interface);
+	result.interfaces.add(AnalysisResultsExtEventsIface);
+	for (v in AnalysisResultsIface.variableList.collect( vl | vl.vars).flatten()) {
+		// get_analysisResults transitions
+		var t = new RoboChart!Transition;
+		t.name = v.name + "_get_trans";
+		t.source = KnowledgeState;
+		t.target = KnowledgeState;
+		// trigger: get_var
+		var trigger = new RoboChart!Communication;
+		trigger.event = AnalysisResultsEventsIface.events.select( ev | ev.name == ("get_" + v.name) ).first();
+		trigger._type = RoboChart!CommunicationType#SIMPLE;
+		t.trigger = trigger;
+		// action: var!var
+		var action = new RoboChart!CommunicationStmt;
+		action.communication = new RoboChart!Communication;
+		action.communication.event = AnalysisResultsEventsIface.events.select( ev | ev.name == v.name ).first();
+		action.communication._type = RoboChart!CommunicationType#OUTPUT;
+		action.communication.value = new RefExp;
+		action.communication.value.ref = v;
+		t.action = action;
+		result.transitions.add(t);
+		
+		// set_analysisResults transitions
+		var t = new RoboChart!Transition;
+		t.name = v.name + "_set_trans";
+		t.source = KnowledgeState;
+		t.target = KnowledgeState;
+		// action: set_var?var
+		var trigger = new RoboChart!Communication;
+		trigger.event = AnalysisResultsSetEventsIface.events.select( ev | ev.name == ("set_" + v.name) ).first();
+		trigger._type = RoboChart!CommunicationType#INPUT;
+		trigger.value = new RefExp;
+		trigger.value.ref = v;
+		t.action = action;
+		result.transitions.add(t);
+		
+		// get_analysisResults_ext transitions
+		var t = new RoboChart!Transition;
+		t.name = v.name + "_ext_trans";
+		t.source = KnowledgeState;
+		t.target = KnowledgeState;
+		// trigger: get_var_ext
+		var trigger = new RoboChart!Communication;
+		trigger.event = AnalysisResultsExtEventsIface.events.select( ev | ev.name == ("get_" + v.name + "_ext") ).first();
+		trigger._type = RoboChart!CommunicationType#SIMPLE;
+		t.trigger = trigger;
+		// action: var_ext!var
+		var action = new RoboChart!CommunicationStmt;
+		action.communication = new RoboChart!Communication;
+		action.communication.event = AnalysisResultsExtEventsIface.events.select( ev | ev.name == (v.name + "_ext") ).first();
+		action.communication._type = RoboChart!CommunicationType#OUTPUT;
+		action.communication.value = new RefExp;
+		action.communication.value.ref = v;
+		t.action = action;
+		result.transitions.add(t);
+	}
+	if (amptn.plan <> null) {
+		var AnalysisResultsPlanEventsIface = ref(lyrName + "_AnalysisResults_Plan_events", RoboChart!Interface);
+		result.interfaces.add(AnalysisResultsPlanEventsIface);
+	
+		for (v in AnalysisResultsIface.variableList.collect( vl | vl.vars).flatten()) {
+			// get_analysisResults_Plan transitions
+			var t = new RoboChart!Transition;
+			t.name = v.name + "_get_Plan_trans";
+			t.source = KnowledgeState;
+			t.target = KnowledgeState;
+			// trigger: get_var
+			var trigger = new RoboChart!Communication;
+			trigger.event = AnalysisResultsPlanEventsIface.events.select( ev | ev.name == ("get_" + v.name + "_Plan") ).first();
+			trigger._type = RoboChart!CommunicationType#SIMPLE;
+			t.trigger = trigger;
+			// action: var!var
+			var action = new RoboChart!CommunicationStmt;
+			action.communication = new RoboChart!Communication;
+			action.communication.event = AnalysisResultsPlanEventsIface.events.select( ev | ev.name == (v.name  + "_Plan") ).first();
+			action.communication._type = RoboChart!CommunicationType#OUTPUT;
+			action.communication.value = new RefExp;
+			action.communication.value.ref = v;
+			t.action = action;
+			result.transitions.add(t);
+		}
+	}
+	
+	if (amptn.legitimate <> null) {
+		var AnalysisResultsLegitimateEventsIface = ref(lyrName + "_AnalysisResults_Legitimate_events", RoboChart!Interface);
+		result.interfaces.add(AnalysisResultsLegitimateEventsIface);
+		
+		for (v in AnalysisResultsIface.variableList.collect( vl | vl.vars).flatten()) {
+			// get_analysisResults_Legitimate transitions
+			var t = new RoboChart!Transition;
+			t.name = v.name + "_get_Legitimate_trans";
+			t.source = KnowledgeState;
+			t.target = KnowledgeState;
+			// trigger: get_var
+			var trigger = new RoboChart!Communication;
+			trigger.event = AnalysisResultsLegitimateEventsIface.events.select( ev | ev.name == ("get_" + v.name + "_Legitimate") ).first();
+			trigger._type = RoboChart!CommunicationType#SIMPLE;
+			t.trigger = trigger;
+			// action: var!var
+			var action = new RoboChart!CommunicationStmt;
+			action.communication = new RoboChart!Communication;
+			action.communication.event = AnalysisResultsLegitimateEventsIface.events.select( ev | ev.name == (v.name  + "_Legitimate") ).first();
+			action.communication._type = RoboChart!CommunicationType#OUTPUT;
+			action.communication.value = new RefExp;
+			action.communication.value.ref = v;
+			t.action = action;
+			result.transitions.add(t);
+		}
+	}
+	
+	// add PlanData events and transitions
+	var PlanDataEventsIface = ref(lyrName + "_PlanData_events", RoboChart!Interface);
+	result.interfaces.add(PlanDataEventsIface);
+	var PlanDataSetEventsIface = ref(lyrName + "_PlanData_set_events", RoboChart!Interface);
+	result.interfaces.add(PlanDataSetEventsIface);
+	var PlanDataExtEventsIface = ref(lyrName + "_PlanData_ext_events", RoboChart!Interface);
+	result.interfaces.add(PlanDataExtEventsIface);
+	for (v in PlanDataIface.variableList.collect( vl | vl.vars).flatten()) {
+		// get_planData transitions
+		var t = new RoboChart!Transition;
+		t.name = v.name + "_get_trans";
+		t.source = KnowledgeState;
+		t.target = KnowledgeState;
+		// trigger: get_var
+		var trigger = new RoboChart!Communication;
+		trigger.event = PlanDataEventsIface.events.select( ev | ev.name == ("get_" + v.name) ).first();
+		trigger._type = RoboChart!CommunicationType#SIMPLE;
+		t.trigger = trigger;
+		// action: var!var
+		var action = new RoboChart!CommunicationStmt;
+		action.communication = new RoboChart!Communication;
+		action.communication.event = PlanDataEventsIface.events.select( ev | ev.name == v.name ).first();
+		action.communication._type = RoboChart!CommunicationType#OUTPUT;
+		action.communication.value = new RefExp;
+		action.communication.value.ref = v;
+		t.action = action;
+		result.transitions.add(t);
+		
+		// set_planData transitions
+		var t = new RoboChart!Transition;
+		t.name = v.name + "_set_trans";
+		t.source = KnowledgeState;
+		t.target = KnowledgeState;
+		// action: set_var?var
+		var trigger = new RoboChart!Communication;
+		trigger.event = PlanDataSetEventsIface.events.select( ev | ev.name == ("set_" + v.name) ).first();
+		trigger._type = RoboChart!CommunicationType#INPUT;
+		trigger.value = new RefExp;
+		trigger.value.ref = v;
+		t.action = action;
+		result.transitions.add(t);
+		
+		// ext_planData transitions
+		var t = new RoboChart!Transition;
+		t.name = v.name + "_ext_trans";
+		t.source = KnowledgeState;
+		t.target = KnowledgeState;
+		// trigger: get_var_ext
+		var trigger = new RoboChart!Communication;
+		trigger.event = PlanDataExtEventsIface.events.select( ev | ev.name == ("get_" + v.name + "_ext") ).first();
+		trigger._type = RoboChart!CommunicationType#SIMPLE;
+		t.trigger = trigger;
+		// action: var_ext!var
+		var action = new RoboChart!CommunicationStmt;
+		action.communication = new RoboChart!Communication;
+		action.communication.event = PlanDataExtEventsIface.events.select( ev | ev.name == (v.name + "_ext") ).first();
+		action.communication._type = RoboChart!CommunicationType#OUTPUT;
+		action.communication.value = new RefExp;
+		action.communication.value.ref = v;
+		t.action = action;
+		result.transitions.add(t);
+	}
+	if (amptn.legitimate <> null) {
+		var PlanDataLegitimateEventsIface = ref(lyrName + "_PlanData_Legitimate_events", RoboChart!Interface);
+		result.interfaces.add(PlanDataLegitimateEventsIface);
+	
+		for (v in PlanDataIface.variableList.collect( vl | vl.vars).flatten()) {
+			// get_planData_Legitimate transitions
+			var t = new RoboChart!Transition;
+			t.name = v.name + "_get_Legitimate_trans";
+			t.source = KnowledgeState;
+			t.target = KnowledgeState;
+			// trigger: get_var
+			var trigger = new RoboChart!Communication;
+			trigger.event = PlanDataLegitimateEventsIface.events.select( ev | ev.name == ("get_" + v.name + "_Legitimate") ).first();
+			trigger._type = RoboChart!CommunicationType#SIMPLE;
+			t.trigger = trigger;
+			// action: var!var
+			var action = new RoboChart!CommunicationStmt;
+			action.communication = new RoboChart!Communication;
+			action.communication.event = PlanDataLegitimateEventsIface.events.select( ev | ev.name == (v.name  + "_Legitimate") ).first();
+			action.communication._type = RoboChart!CommunicationType#OUTPUT;
+			action.communication.value = new RefExp;
+			action.communication.value.ref = v;
+			t.action = action;
+			result.transitions.add(t);
+		}
+	}
+	if (amptn.execute <> null) {
+		var PlanDataExecuteEventsIface = ref(lyrName + "_PlanData_Execute_events", RoboChart!Interface);
+		result.interfaces.add(PlanDataExecuteEventsIface);
+	
+		for (v in PlanDataIface.variableList.collect( vl | vl.vars).flatten()) {
+			// get_planData_Execute transitions
+			var t = new RoboChart!Transition;
+			t.name = v.name + "_get_Execute_trans";
+			t.source = KnowledgeState;
+			t.target = KnowledgeState;
+			// trigger: get_var
+			var trigger = new RoboChart!Communication;
+			trigger.event = PlanDataExecuteEventsIface.events.select( ev | ev.name == ("get_" + v.name + "_Execute") ).first();
+			trigger._type = RoboChart!CommunicationType#SIMPLE;
+			t.trigger = trigger;
+			// action: var!var
+			var action = new RoboChart!CommunicationStmt;
+			action.communication = new RoboChart!Communication;
+			action.communication.event = PlanDataExecuteEventsIface.events.select( ev | ev.name == (v.name  + "_Execute") ).first();
+			action.communication._type = RoboChart!CommunicationType#OUTPUT;
+			action.communication.value = new RefExp;
+			action.communication.value.ref = v;
+			t.action = action;
+			result.transitions.add(t);
+		}
+	}
+	
+	// add VerificationInfo events and transitions
+	var VerificationInfoEventsIface = ref(lyrName + "_VerificationInfo_events", RoboChart!Interface);
+	result.interfaces.add(VerificationInfoEventsIface);
+	var VerificationInfoSetEventsIface = ref(lyrName + "_VerificationInfo_set_events", RoboChart!Interface);
+	result.interfaces.add(VerificationInfoSetEventsIface);
+	var VerificationInfoExtEventsIface = ref(lyrName + "_VerificationInfo_ext_events", RoboChart!Interface);
+	result.interfaces.add(VerificationInfoExtEventsIface);
+	for (v in VerificationInfoIface.variableList.collect( vl | vl.vars).flatten()) {
+		// get_verificationInfo transitions
+		var t = new RoboChart!Transition;
+		t.name = v.name + "_get_trans";
+		t.source = KnowledgeState;
+		t.target = KnowledgeState;
+		// trigger: get_var
+		var trigger = new RoboChart!Communication;
+		trigger.event = VerificationInfoEventsIface.events.select( ev | ev.name == ("get_" + v.name) ).first();
+		trigger._type = RoboChart!CommunicationType#SIMPLE;
+		t.trigger = trigger;
+		// action: var!var
+		var action = new RoboChart!CommunicationStmt;
+		action.communication = new RoboChart!Communication;
+		action.communication.event = VerificationInfoEventsIface.events.select( ev | ev.name == v.name ).first();
+		action.communication._type = RoboChart!CommunicationType#OUTPUT;
+		action.communication.value = new RefExp;
+		action.communication.value.ref = v;
+		t.action = action;
+		result.transitions.add(t);
+		
+		// set_verificationInfo transitions
+		var t = new RoboChart!Transition;
+		t.name = v.name + "_set_trans";
+		t.source = KnowledgeState;
+		t.target = KnowledgeState;
+		// action: set_var?var
+		var trigger = new RoboChart!Communication;
+		trigger.event = VerificationInfoSetEventsIface.events.select( ev | ev.name == ("set_" + v.name) ).first();
+		trigger._type = RoboChart!CommunicationType#INPUT;
+		trigger.value = new RefExp;
+		trigger.value.ref = v;
+		t.action = action;
+		result.transitions.add(t);
+		
+		// ext_verificationInfo transitions
+		var t = new RoboChart!Transition;
+		t.name = v.name + "_ext_trans";
+		t.source = KnowledgeState;
+		t.target = KnowledgeState;
+		// trigger: get_var_ext
+		var trigger = new RoboChart!Communication;
+		trigger.event = VerificationInfoExtEventsIface.events.select( ev | ev.name == ("get_" + v.name + "_ext") ).first();
+		trigger._type = RoboChart!CommunicationType#SIMPLE;
+		t.trigger = trigger;
+		// action: var_ext!var
+		var action = new RoboChart!CommunicationStmt;
+		action.communication = new RoboChart!Communication;
+		action.communication.event = VerificationInfoExtEventsIface.events.select( ev | ev.name == (v.name + "_ext") ).first();
+		action.communication._type = RoboChart!CommunicationType#OUTPUT;
+		action.communication.value = new RefExp;
+		action.communication.value.ref = v;
+		t.action = action;
+		result.transitions.add(t);
+	}
+	if (amptn.legitimate <> null) {
+		var VerificationInfoPlanEventsIface = ref(lyrName + "_VerificationInfo_Plan_events", RoboChart!Interface);
+		result.interfaces.add(VerificationInfoPlanEventsIface);
+	
+		for (v in VerificationInfoIface.variableList.collect( vl | vl.vars).flatten()) {
+			// get_verificationInfo_Legitimate transitions
+			var t = new RoboChart!Transition;
+			t.name = v.name + "_get_Plan_trans";
+			t.source = KnowledgeState;
+			t.target = KnowledgeState;
+			// trigger: get_var
+			var trigger = new RoboChart!Communication;
+			trigger.event = VerificationInfoPlanEventsIface.events.select( ev | ev.name == ("get_" + v.name + "_Plan") ).first();
+			trigger._type = RoboChart!CommunicationType#SIMPLE;
+			t.trigger = trigger;
+			// action: var!var
+			var action = new RoboChart!CommunicationStmt;
+			action.communication = new RoboChart!Communication;
+			action.communication.event = VerificationInfoPlanEventsIface.events.select( ev | ev.name == (v.name  + "_Plan") ).first();
+			action.communication._type = RoboChart!CommunicationType#OUTPUT;
+			action.communication.value = new RefExp;
+			action.communication.value.ref = v;
+			t.action = action;
+			result.transitions.add(t);
+		}
+	}
+//	if (amptn.execute <> null) {
+//		var VerificationInfoExecuteEventsIface = ref(lyrName + "_VerificationInfo_Execute_events", RoboChart!Interface);
+//		result.interfaces.add(VerificationInfoExecuteEventsIface);
+//	
+//		for (v in VerificationInfoIface.variableList.collect( vl | vl.vars).flatten()) {
+//			// get_verificationInfo_Execute transitions
+//			var t = new RoboChart!Transition;
+//			t.name = v.name + "_get_Execute_trans";
+//			t.source = KnowledgeState;
+//			t.target = KnowledgeState;
+//			// trigger: get_var
+//			var trigger = new RoboChart!Communication;
+//			trigger.event = VerificationInfoExecuteEventsIface.events.select( ev | ev.name == ("get_" + v.name + "_Execute") ).first();
+//			trigger._type = RoboChart!CommunicationType#SIMPLE;
+//			t.trigger = trigger;
+//			// action: var!var
+//			var action = new RoboChart!CommunicationStmt;
+//			action.communication = new RoboChart!Communication;
+//			action.communication.event = VerificationInfoExecuteEventsIface.events.select( ev | ev.name == (v.name  + "_Execute") ).first();
+//			action.communication._type = RoboChart!CommunicationType#OUTPUT;
+//			action.communication.value = new RefExp;
+//			action.communication.value.ref = v;
+//			t.action = action;
+//			result.transitions.add(t);
+//		}
+//	}
+	
+	// make state machine package
+	var rcpkg = new RoboChart!RCPackage;
+	rcpkg.name = result.name;
+	rcpkg.machines = Set{};
+	rcpkg.machines.add(result);
+	
+	var packageImport = new RoboChart!Import;
+	packageImport.importedNamespace = DefinitionsName() + rc_importall();
+	printDebug(rcpkg.name + ": adding import of " + packageImport.importedNamespace);
+	rcpkg.imports.add( packageImport );
+	
+	return result;
+}
+	
+	

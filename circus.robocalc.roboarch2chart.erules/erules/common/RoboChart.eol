@@ -11,7 +11,15 @@
  *   William Barnett - initial definition
  ********************************************************************************/
 
-
+operation rc_type(typeName: String): RoboChart!PrimitiveType {
+	var rs = RoboChart.getResource().getResourceSet();
+	var uri = RoboChart.getResource().getUri();
+	var core = rs.getResource(uri.createURI("platform:/plugin/circus.robocalc.robochart.textual/lib/robochart/core.rct"), true);
+	core.load(null);
+	var typeObj = core.getContents()[0].eContents().select(obj | obj.name = typeName)[0];
+	printDebug("library type found: " + typeObj);
+	return typeObj;
+}
 
 /*************************
  * Constants
@@ -36,7 +44,7 @@ operation getPackageImport( packageName:String ) : RoboChart!Import {
  	
  	var foundPackage = definedPackages.selectOne( pkg: RoboChart!RCPackage | packageName = pkg.name.asString().split( rc_separator() ).last()  );
 	
-	printDebug("found package - " + foundPackage.name );
+	printDebug("found package - " + foundPackage );
 	
 	var packageImport = new RoboChart!Import;
 	packageImport.importedNamespace = foundPackage.name + rc_importall();
@@ -240,14 +248,56 @@ operation CopyControllerReference(source:RoboChart!ControllerRef , destination:R
 	destination.ref = source.ref;
 }
 
-operation RoboChart!TypeRef clone() : RoboChart!TypeRef {
-	var copy = new RoboChart!TypeRef;
+operation RoboChart!ProductType clone() : RoboChart!ProductType {
+	var copy = new RoboChart!ProductType;
 	
-	copy.ref = self.ref;
+	for (type in self.types) {
+		copy.types.add(type.clone());
+	}
 	
 	return copy;
 }
 
+operation RoboChart!RelationType clone() : RoboChart!RelationType {
+	var copy = new RoboChart!RelationType;
+	
+	copy.domain = self.domain.clone();
+	copy.range = self.range.clone();
+	
+	return copy;
+}
+
+operation RoboChart!SetType clone() : RoboChart!SetType {
+	var copy = new RoboChart!SetType;
+	
+	copy.domain = self.domain.clone();
+	
+	return copy;
+}
+
+operation RoboChart!SeqType clone() : RoboChart!SeqType {
+	var copy = new RoboChart!SeqType;
+	
+	copy.domain = self.domain.clone();
+	
+	return copy;
+}
+
+operation RoboArch!TypeRef clone() : RoboChart!TypeRef {
+	var copy = new RoboChart!TypeRef;
+	
+	copy.ref = self.ref.equivalent();
+	
+	return copy;
+}
+
+operation RoboChart!AnyType clone() : RoboChart!AnyType {
+	var copy = new RoboChart!AnyType;
+	
+	copy.identifier = self.identifier;
+	
+	return copy;
+}
 
 /*************************
  * Filter
@@ -267,6 +317,30 @@ operation GetMachinesFromPackages(packages:Collection(RoboChart!RCPackage)){
 /*************************
  * Create
  **************************/
+ 
+operation RoboChart!RCPackage saveRCPackage() {
+	var outputURI = RoboChart.getResource().getURI();
+	var outfolderURI = outputURI.trimsegments(1);
+	var newURI = outfolderURI.appendSegment(self.name + ".xmi");
+	
+	var rsset = RoboChart.getResource().getResourceSet();
+		
+	// If the new URI is different from that originally set,
+	// it means that this is an RCPackage whose '.rct' should
+	// be stored somewhere else.
+	//
+	// So we create a new Resource, with the newURI, and add 't' to it.
+	//
+	// WARNING: This does not behave as expected if Clone has been
+	// 			loaded with the cache option set to true. Epsilon
+	//			implements its own cache, which evicts elements when
+	//			they are moved into a new resource. Sadly, it does
+	// 			not seem straightforward to add them back, so no cache! :(
+	if (newURI <> RoboChart.getResource().getURI()) {
+		var rs = rsset.createResource(newURI,null);
+		rs.getContents().add(self);
+	}
+}
 
 operation CreateRCEvent(name:String): RoboChart!Event{
 	var event: RoboChart!Event = new RoboChart!Event;
@@ -280,12 +354,12 @@ operation CreateRCEvent(name:String, type: RoboChart!Type): RoboChart!Event{
 	
 	var newType;
 	
-	if (type.isTypeOf(RoboChart!TypeRef) ){
-		//Ref need to be duplicated for each event created.
-		newType = type.clone();
-	} else {
+//	if (type.isTypeOf(RoboChart!TypeRef) ){
+//		//Ref need to be duplicated for each event created.
+//		newType = type.clone();
+//	} else {
 		newType = type;
-	}
+//	}
 
 	event.name = name;
 	event.broadcast = false;
@@ -299,12 +373,12 @@ operation CreateRCVariable(name:String, type: RoboChart!Type): RoboChart!Variabl
 	
 	var newType;
 	
-	if (type.isTypeOf(RoboChart!TypeRef) ){
-		//Ref need to be duplicated for each event created.
-		newType = type.clone();
-	} else {
+//	if (type.isTypeOf(RoboChart!TypeRef) ){
+//		//Ref need to be duplicated for each event created.
+//		newType = type.clone();
+//	} else {
 		newType = type;
-	}
+//	}
 
 	variable.name = name;
 	variable.type = newType;

@@ -1,0 +1,752 @@
+/********************************************************************************
+ * Copyright (c) 2025 University of York and others
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0.
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ *
+ * Contributors:
+ *   James Baxter - initial definition
+ ********************************************************************************/
+
+import "../patterns/MAPLEK/MAPLEK-Analyse.eol";
+import "../patterns/MAPLEK/MAPLEK-Monitor.eol";
+import "../patterns/MAPLEK/MAPLEK-Plan.eol";
+import "../patterns/MAPLEK/MAPLEK-Legitimate.eol";
+import "../patterns/MAPLEK/MAPLEK-Execute.eol";
+import "../patterns/MAPLEK/MAPLEK-Knowledge.eol";
+
+operation MAPLEKMachinesAndConnections(amlyr: RoboArch!Layer): Tuple  {
+	var result = new Tuple(machines = Sequence{}, connections = Sequence{}, imports = Sequence{});
+	
+	var stm_ref0 = new RoboChart!StateMachineRef;
+	stm_ref0.name = "stm_ref0";
+	stm_ref0.ref = MonitorStateMachine(amlyr.pattern.monitor, amlyr.pattern, amlyr.name);
+	result.machines.add(stm_ref0);
+	result.imports.add( getPackageImport( stm_ref0.ref.name ) );
+	
+	var stm_ref1 = new RoboChart!StateMachineRef;
+	stm_ref1.name = "stm_ref1";
+	stm_ref1.ref = AnalyseStateMachine(amlyr.pattern.analyse, amlyr.pattern, amlyr.name);
+	result.machines.add(stm_ref1);
+	result.imports.add( getPackageImport( stm_ref1.ref.name ) );
+		
+	var stm_ref2 = new RoboChart!StateMachineRef;
+	stm_ref2.name = "stm_ref2";
+	stm_ref2.ref = PlanStateMachine(amlyr.pattern.plan, amlyr.pattern, amlyr.name);
+	result.machines.add(stm_ref2);
+	result.imports.add( getPackageImport( stm_ref2.ref.name ) );
+	
+	var stm_ref3 = new RoboChart!StateMachineRef;
+	stm_ref3.name = "stm_ref3";
+	stm_ref3.ref = LegitimateStateMachine(amlyr.pattern.legitimate, amlyr.pattern, amlyr.name);
+	result.machines.add(stm_ref3);
+	result.imports.add( getPackageImport( stm_ref3.ref.name ) );
+	
+	var stm_ref4 = new RoboChart!StateMachineRef;
+	stm_ref4.name = "stm_ref4";
+	stm_ref4.ref = ExecuteStateMachine(amlyr.pattern.execute, amlyr.pattern, amlyr.name);
+	result.machines.add(stm_ref4);
+	result.imports.add( getPackageImport( stm_ref4.ref.name ) );
+	
+	var stm_ref5 = new RoboChart!StateMachineRef;
+	stm_ref5.name = "stm_ref5";
+	stm_ref5.ref = KnowledgeStateMachine(amlyr.pattern, amlyr.name);
+	result.machines.add(stm_ref5);
+	result.imports.add( getPackageImport( stm_ref5.ref.name ) );
+	
+	var ctrl = RoboChart!ControllerDef.allInstances().select( ctrl | ctrl.name == amlyr.name ).first();
+	
+	// input event connections
+	for (ev in amlyr.pattern.monitor.inputs) {
+		var conn = new RoboChart!Connection;
+		conn.`async` = false;
+		conn.bidirec = false;
+		conn.from = ctrl;
+		conn.to = stm_ref0;
+		conn.efrom = ev.equivalent();
+		conn.eto = ev.equivalent();
+		result.connections.add(conn);
+	}
+	
+	// processedData event connection
+	var conn = new RoboChart!Connection;
+	conn.`async` = false;
+	conn.bidirec = false;
+	conn.from = stm_ref0;
+	conn.to = stm_ref1;
+	conn.efrom = stm_ref0.ref.events.select( ev | ev.name == "processedData" ).first();
+	conn.eto = stm_ref1.ref.events.select( ev | ev.name == "processedData" ).first();
+	result.connections.add(conn);
+
+	// anomalyFound event connection
+	var conn = new RoboChart!Connection;
+	conn.`async` = false;
+	conn.bidirec = false;
+	conn.from = stm_ref1;
+	conn.to = stm_ref2;
+	conn.efrom = stm_ref1.ref.events.select( ev | ev.name == "anomalyFound" ).first();
+	conn.eto = stm_ref2.ref.events.select( ev | ev.name == "requestPlan" ).first();
+	result.connections.add(conn);
+	
+	// planningCompleted event connection
+	var conn = new RoboChart!Connection;
+	conn.`async` = false;
+	conn.bidirec = false;
+	conn.from = stm_ref2;
+	conn.to = stm_ref3;
+	conn.efrom = stm_ref2.ref.events.select( ev | ev.name == "planningCompleted" ).first();
+	conn.eto = stm_ref3.ref.events.select( ev | ev.name == "verifyPlan" ).first();
+	result.connections.add(conn);
+	
+	// planRejected event connection
+	var conn = new RoboChart!Connection;
+	conn.`async` = false;
+	conn.bidirec = false;
+	conn.from = stm_ref3;
+	conn.to = stm_ref2;
+	conn.efrom = stm_ref3.ref.events.select( ev | ev.name == "planRejected" ).first();
+	conn.eto = stm_ref2.ref.events.select( ev | ev.name == "planRejected" ).first();
+	result.connections.add(conn);
+	
+	// planAccepted event connection
+	var conn = new RoboChart!Connection;
+	conn.`async` = false;
+	conn.bidirec = false;
+	conn.from = stm_ref3;
+	conn.to = stm_ref4;
+	conn.efrom = stm_ref3.ref.events.select( ev | ev.name == "planAccepted" ).first();
+	conn.eto = stm_ref4.ref.events.select( ev | ev.name == "executePlan" ).first();
+	result.connections.add(conn);
+	
+	// adaptationCompleted event connection
+	var conn = new RoboChart!Connection;
+	conn.`async` = false;
+	conn.bidirec = false;
+	conn.from = stm_ref4;
+	conn.to = stm_ref1;
+	conn.efrom = stm_ref4.ref.events.select( ev | ev.name == "adaptationCompleted" ).first();
+	conn.eto = stm_ref1.ref.events.select( ev | ev.name == "adaptationCompleted" ).first();
+	result.connections.add(conn);
+	
+	// output event connections
+	for (ev in amlyr.pattern.execute.outputs) {
+		var conn = new RoboChart!Connection;
+		conn.`async` = false;
+		conn.bidirec = false;
+		conn.from = stm_ref4;
+		conn.to = ctrl;
+		conn.efrom = ev.equivalent();
+		conn.eto = ev.equivalent();
+		result.connections.add(conn);
+	}
+	
+	// Knowledge external connections
+	result.connections.addAll( MAPLEKKnowledgeExternalConnections(stm_ref5, ctrl, amlyr.pattern) );
+	// Monitor Knowledge connections
+	result.connections.addAll( MAPLEKMonitorKnowledgeConnections(stm_ref0, stm_ref5, amlyr.pattern) );
+	// Analyse Knowledge connections
+	result.connections.addAll( MAPLEKAnalyseKnowledgeConnections(stm_ref1, stm_ref5, amlyr.pattern) );
+	// Plan Knowledge connections
+	result.connections.addAll( MAPLEKPlanKnowledgeConnections(stm_ref2, stm_ref5, amlyr.pattern) );
+	// Legitimate Knowledge connections
+	result.connections.addAll( MAPLEKLegitimateKnowledgeConnections(stm_ref3, stm_ref5, amlyr.pattern) );
+	// Execute Knowledge connections
+	result.connections.addAll( MAPLEKExecuteKnowledgeConnections(stm_ref4, stm_ref5, amlyr.pattern) );
+	
+	return result;
+}
+
+operation MAPEKMachinesAndConnections(amlyr: RoboArch!Layer): Tuple  {
+	var result = new Tuple(machines = Sequence{}, connections = Sequence{}, imports = Sequence{});
+	
+	var stm_ref0 = new RoboChart!StateMachineRef;
+	stm_ref0.name = "stm_ref0";
+	stm_ref0.ref = MonitorStateMachine(amlyr.pattern.monitor, amlyr.pattern, amlyr.name);
+	result.machines.add(stm_ref0);
+	result.imports.add( getPackageImport( stm_ref0.ref.name ) );
+	
+	var stm_ref1 = new RoboChart!StateMachineRef;
+	stm_ref1.name = "stm_ref1";
+	stm_ref1.ref = AnalyseStateMachine(amlyr.pattern.analyse, amlyr.pattern, amlyr.name);
+	result.machines.add(stm_ref1);
+	result.imports.add( getPackageImport( stm_ref1.ref.name ) );
+		
+	var stm_ref2 = new RoboChart!StateMachineRef;
+	stm_ref2.name = "stm_ref2";
+	stm_ref2.ref = PlanStateMachine(amlyr.pattern.plan, amlyr.pattern, amlyr.name);
+	result.machines.add(stm_ref2);
+	result.imports.add( getPackageImport( stm_ref2.ref.name ) );
+	
+	var stm_ref4 = new RoboChart!StateMachineRef;
+	stm_ref4.name = "stm_ref4";
+	stm_ref4.ref = ExecuteStateMachine(amlyr.pattern.execute, amlyr.pattern, amlyr.name);
+	result.machines.add(stm_ref4);
+	result.imports.add( getPackageImport( stm_ref4.ref.name ) );
+	
+	var stm_ref5 = new RoboChart!StateMachineRef;
+	stm_ref5.name = "stm_ref5";
+	stm_ref5.ref = KnowledgeStateMachine(amlyr.pattern, amlyr.name);
+	result.machines.add(stm_ref5);
+	result.imports.add( getPackageImport( stm_ref5.ref.name ) );
+	
+	var ctrl = RoboChart!ControllerDef.allInstances().select( ctrl | ctrl.name == amlyr.name ).first();
+	
+	// input event connections
+	for (ev in amlyr.pattern.monitor.inputs) {
+		var conn = new RoboChart!Connection;
+		conn.`async` = false;
+		conn.bidirec = false;
+		conn.from = ctrl;
+		conn.to = stm_ref0;
+		conn.efrom = ev.equivalent();
+		conn.eto = ev.equivalent();
+		result.connections.add(conn);
+	}
+	
+	// processedData event connection
+	var conn = new RoboChart!Connection;
+	conn.`async` = false;
+	conn.bidirec = false;
+	conn.from = stm_ref0;
+	conn.to = stm_ref1;
+	conn.efrom = stm_ref0.ref.events.select( ev | ev.name == "processedData" ).first();
+	conn.eto = stm_ref1.ref.events.select( ev | ev.name == "processedData" ).first();
+	result.connections.add(conn);
+
+	// anomalyFound event connection
+	var conn = new RoboChart!Connection;
+	conn.`async` = false;
+	conn.bidirec = false;
+	conn.from = stm_ref1;
+	conn.to = stm_ref2;
+	conn.efrom = stm_ref1.ref.events.select( ev | ev.name == "anomalyFound" ).first();
+	conn.eto = stm_ref2.ref.events.select( ev | ev.name == "requestPlan" ).first();
+	result.connections.add(conn);
+	
+	// planningCompleted event connection
+	var conn = new RoboChart!Connection;
+	conn.`async` = false;
+	conn.bidirec = false;
+	conn.from = stm_ref2;
+	conn.to = stm_ref4;
+	conn.efrom = stm_ref2.ref.events.select( ev | ev.name == "planningCompleted" ).first();
+	conn.eto = stm_ref4.ref.events.select( ev | ev.name == "executePlan" ).first();
+	result.connections.add(conn);
+	
+	// adaptationCompleted event connection
+	var conn = new RoboChart!Connection;
+	conn.`async` = false;
+	conn.bidirec = false;
+	conn.from = stm_ref4;
+	conn.to = stm_ref1;
+	conn.efrom = stm_ref4.ref.events.select( ev | ev.name == "adaptationCompleted" ).first();
+	conn.eto = stm_ref1.ref.events.select( ev | ev.name == "adaptationCompleted" ).first();
+	result.connections.add(conn);
+	
+	// output event connections
+	for (ev in amlyr.pattern.execute.outputs) {
+		var conn = new RoboChart!Connection;
+		conn.`async` = false;
+		conn.bidirec = false;
+		conn.from = stm_ref4;
+		conn.to = ctrl;
+		conn.efrom = ev.equivalent();
+		conn.eto = ev.equivalent();
+		result.connections.add(conn);
+	}
+	
+	// Knowledge external connections
+	result.connections.addAll( MAPLEKKnowledgeExternalConnections(stm_ref5, ctrl, amlyr.pattern) );
+	// Monitor Knowledge connections
+	result.connections.addAll( MAPLEKMonitorKnowledgeConnections(stm_ref0, stm_ref5, amlyr.pattern) );
+	// Analyse Knowledge connections
+	result.connections.addAll( MAPLEKAnalyseKnowledgeConnections(stm_ref1, stm_ref5, amlyr.pattern) );
+	// Plan Knowledge connections
+	result.connections.addAll( MAPLEKPlanKnowledgeConnections(stm_ref2, stm_ref5, amlyr.pattern) );
+	// Execute Knowledge connections
+	result.connections.addAll( MAPLEKExecuteKnowledgeConnections(stm_ref4, stm_ref5, amlyr.pattern) );
+	
+	return result;
+}
+
+operation MAPLEKKnowledgeExternalConnections(knowledge: RoboChart!StateMachineRef, ctrl: RoboChart!ControllerDef, amptn: RoboArch!MAPLEK): Sequence(RoboChart!Connection) {
+	var knowledge_events = knowledge.ref.interfaces.collect( iface | iface.events ).flatten();
+	var result = Sequence {};
+	
+	var rdvrs = amptn.monitor.recordedData;
+	for (v in rdvrs) {
+		// var_ext connection
+		var ctrl_event = ctrl.events.select( ev | ev.name == v.name ).first();
+		if (ctrl_event <> null) {
+			var conn = new RoboChart!Connection;
+			conn.`async` = false;
+			conn.bidirec = false;
+			conn.from = knowledge;
+			conn.to = ctrl;
+			conn.efrom = knowledge_events.select( ev | ev.name == (v.name + "_ext") ).first();
+			conn.eto = ctrl_event;
+			result.connections.add(conn);
+		}
+		
+		// get_var_ext connection
+		var ctrl_event = ctrl.events.select( ev | ev.name == ("get_" + v.name) ).first();
+		if (ctrl_event <> null) {
+			var conn = new RoboChart!Connection;
+			conn.`async` = false;
+			conn.bidirec = false;
+			conn.from = ctrl;
+			conn.to = knowledge;
+			conn.efrom = ctrl_event;
+			conn.eto = knowledge_events.select( ev | ev.name == ("get_" + v.name + "_ext") ).first();
+			result.connections.add(conn);
+		}
+	}
+	
+	var arvrs = amptn.analyse.asSet().collect( a | a.analysisResults ).flatten();
+	for (v in arvrs) {
+		// var_ext connection
+		var ctrl_event = ctrl.events.select( ev | ev.name == v.name ).first();
+		if (ctrl_event <> null) {
+			var conn = new RoboChart!Connection;
+			conn.`async` = false;
+			conn.bidirec = false;
+			conn.from = knowledge;
+			conn.to = ctrl;
+			conn.efrom = knowledge_events.select( ev | ev.name == (v.name + "_ext") ).first();
+			conn.eto = ctrl_event;
+			result.connections.add(conn);
+		}
+		
+		// get_var_ext connection
+		var ctrl_event = ctrl.events.select( ev | ev.name == ("get_" + v.name) ).first();
+		if (ctrl_event <> null) {
+			var conn = new RoboChart!Connection;
+			conn.`async` = false;
+			conn.bidirec = false;
+			conn.from = ctrl;
+			conn.to = knowledge;
+			conn.efrom = ctrl_event;
+			conn.eto = knowledge_events.select( ev | ev.name == ("get_" + v.name + "_ext") ).first();
+			result.connections.add(conn);
+		}
+	}
+	
+	var pdvrs = amptn.plan.asSet().collect( p | p.planData ).flatten();
+	for (v in pdvrs) {
+		// var_ext connection
+		var ctrl_event = ctrl.events.select( ev | ev.name == v.name ).first();
+		if (ctrl_event <> null) {
+			var conn = new RoboChart!Connection;
+			conn.`async` = false;
+			conn.bidirec = false;
+			conn.from = knowledge;
+			conn.to = ctrl;
+			conn.efrom = knowledge_events.select( ev | ev.name == (v.name + "_ext") ).first();
+			conn.eto = ctrl_event;
+			result.connections.add(conn);
+		}
+		
+		// get_var_ext connection
+		var ctrl_event = ctrl.events.select( ev | ev.name == ("get_" + v.name) ).first();
+		if (ctrl_event <> null) {
+			var conn = new RoboChart!Connection;
+			conn.`async` = false;
+			conn.bidirec = false;
+			conn.from = ctrl;
+			conn.to = knowledge;
+			conn.efrom = ctrl_event;
+			conn.eto = knowledge_events.select( ev | ev.name == ("get_" + v.name + "_ext") ).first();
+			result.connections.add(conn);
+		}
+	}
+	
+	var vivrs = amptn.legitimate.asSet().collect( l | l.verificationInfo ).flatten();
+	for (v in vivrs) {
+		// var_ext connection
+		var ctrl_event = ctrl.events.select( ev | ev.name == v.name ).first();
+		if (ctrl_event <> null) {
+			var conn = new RoboChart!Connection;
+			conn.`async` = false;
+			conn.bidirec = false;
+			conn.from = knowledge;
+			conn.to = ctrl;
+			conn.efrom = knowledge_events.select( ev | ev.name == (v.name + "_ext") ).first();
+			conn.eto = ctrl_event;
+			result.connections.add(conn);
+		}
+		
+		// get_var_ext connection
+		var ctrl_event = ctrl.events.select( ev | ev.name == ("get_" + v.name) ).first();
+		if (ctrl_event <> null) {
+			var conn = new RoboChart!Connection;
+			conn.`async` = false;
+			conn.bidirec = false;
+			conn.from = ctrl;
+			conn.to = knowledge;
+			conn.efrom = ctrl_event;
+			conn.eto = knowledge_events.select( ev | ev.name == ("get_" + v.name + "_ext") ).first();
+			result.connections.add(conn);
+		}
+	}
+	
+	return result;
+}
+
+operation MAPLEKMonitorKnowledgeConnections(monitor: RoboChart!StateMachineRef, knowledge: RoboChart!StateMachineRef, amptn: RoboArch!MAPLEK): Sequence(RoboChart!Connection) {
+	var knowledge_events = knowledge.ref.interfaces.collect( iface | iface.events ).flatten();
+	var monitor_events = monitor.ref.interfaces.collect( iface | iface.events ).flatten();
+	var result = Sequence {};
+	
+	var rdvrs = amptn.monitor.recordedData;
+	for (v in rdvrs) {
+		// var_ext connection
+		var conn = new RoboChart!Connection;
+		conn.`async` = false;
+		conn.bidirec = false;
+		conn.from = knowledge;
+		conn.to = monitor;
+		conn.efrom = knowledge_events.select( ev | ev.name == v.name ).first();
+		conn.eto = monitor_events.select( ev | ev.name == v.name ).first;
+		result.add(conn);
+		
+		// get_var_ext connection
+		var conn = new RoboChart!Connection;
+		conn.`async` = false;
+		conn.bidirec = false;
+		conn.from = monitor;
+		conn.to = knowledge;
+		conn.efrom = monitor_events.select( ev | ev.name == ("get_" + v.name) ).first();
+		conn.eto = knowledge_events.select( ev | ev.name == ("get_" + v.name) ).first();
+		result.add(conn);
+		
+		// set_var_ext connection
+		var conn = new RoboChart!Connection;
+		conn.`async` = false;
+		conn.bidirec = false;
+		conn.from = monitor;
+		conn.to = knowledge;
+		conn.efrom = monitor_events.select( ev | ev.name == ("set_" + v.name) ).first();
+		conn.eto = knowledge_events.select( ev | ev.name == ("set_" + v.name) ).first();
+		result.add(conn);
+	}
+	
+	return result;
+}
+
+operation MAPLEKAnalyseKnowledgeConnections(analyse: RoboChart!StateMachineRef, knowledge: RoboChart!StateMachineRef, amptn: RoboArch!MAPLEK): Sequence(RoboChart!Connection) {
+	var knowledge_events = knowledge.ref.interfaces.collect( iface | iface.events ).flatten();
+	var analyse_events = analyse.ref.interfaces.collect( iface | iface.events ).flatten();
+	var result = Sequence {};
+	
+	var arvrs = amptn.analyse.asSet().collect( a | a.analysisResults ).flatten();
+	for (v in arvrs) {
+		// var_ext connection
+		var conn = new RoboChart!Connection;
+		conn.`async` = false;
+		conn.bidirec = false;
+		conn.from = knowledge;
+		conn.to = analyse;
+		conn.efrom = knowledge_events.select( ev | ev.name == v.name ).first();
+		conn.eto = analyse_events.select( ev | ev.name == v.name ).first;
+		result.add(conn);
+		
+		// get_var_ext connection
+		var conn = new RoboChart!Connection;
+		conn.`async` = false;
+		conn.bidirec = false;
+		conn.from = analyse;
+		conn.to = knowledge;
+		conn.efrom = analyse_events.select( ev | ev.name == ("get_" + v.name) ).first();
+		conn.eto = knowledge_events.select( ev | ev.name == ("get_" + v.name) ).first();
+		result.add(conn);
+		
+		// set_var_ext connection
+		var conn = new RoboChart!Connection;
+		conn.`async` = false;
+		conn.bidirec = false;
+		conn.from = analyse;
+		conn.to = knowledge;
+		conn.efrom = analyse_events.select( ev | ev.name == ("set_" + v.name) ).first();
+		conn.eto = knowledge_events.select( ev | ev.name == ("set_" + v.name) ).first();
+		result.add(conn);
+	}
+	
+	var rdvrs = amptn.monitor.recordedData;
+	for (v in rdvrs) {
+		// var_ext connection
+		var conn = new RoboChart!Connection;
+		conn.`async` = false;
+		conn.bidirec = false;
+		conn.from = knowledge;
+		conn.to = analyse;
+		conn.efrom = knowledge_events.select( ev | ev.name == (v.name + "_Analyse") ).first();
+		conn.eto = analyse_events.select( ev | ev.name == v.name ).first;
+		result.add(conn);
+		
+		// get_var_ext connection
+		var conn = new RoboChart!Connection;
+		conn.`async` = false;
+		conn.bidirec = false;
+		conn.from = analyse;
+		conn.to = knowledge;
+		conn.efrom = analyse_events.select( ev | ev.name == ("get_" + v.name) ).first();
+		conn.eto = knowledge_events.select( ev | ev.name == ("get_" + v.name + "_Analyse") ).first();
+		result.add(conn);
+	}
+	
+	return result;
+}
+
+operation MAPLEKPlanKnowledgeConnections(plan: RoboChart!StateMachineRef, knowledge: RoboChart!StateMachineRef, amptn: RoboArch!MAPLEK): Sequence(RoboChart!Connection) {
+	var knowledge_events = knowledge.ref.interfaces.collect( iface | iface.events ).flatten();
+	var plan_events = plan.ref.interfaces.collect( iface | iface.events ).flatten();
+	var result = Sequence {};
+	
+	var pdvrs = amptn.plan.asSet().collect( a | a.planData ).flatten();
+	for (v in pdvrs) {
+		// var_ext connection
+		var conn = new RoboChart!Connection;
+		conn.`async` = false;
+		conn.bidirec = false;
+		conn.from = knowledge;
+		conn.to = plan;
+		conn.efrom = knowledge_events.select( ev | ev.name == v.name ).first();
+		conn.eto = plan_events.select( ev | ev.name == v.name ).first;
+		result.add(conn);
+		
+		// get_var_ext connection
+		var conn = new RoboChart!Connection;
+		conn.`async` = false;
+		conn.bidirec = false;
+		conn.from = plan;
+		conn.to = knowledge;
+		conn.efrom = plan_events.select( ev | ev.name == ("get_" + v.name) ).first();
+		conn.eto = knowledge_events.select( ev | ev.name == ("get_" + v.name) ).first();
+		result.add(conn);
+		
+		// set_var_ext connection
+		var conn = new RoboChart!Connection;
+		conn.`async` = false;
+		conn.bidirec = false;
+		conn.from = plan;
+		conn.to = knowledge;
+		conn.efrom = plan_events.select( ev | ev.name == ("set_" + v.name) ).first();
+		conn.eto = knowledge_events.select( ev | ev.name == ("set_" + v.name) ).first();
+		result.add(conn);
+	}
+	
+	var rdvrs = amptn.monitor.recordedData;
+	for (v in rdvrs) {
+		// var_ext connection
+		var conn = new RoboChart!Connection;
+		conn.`async` = false;
+		conn.bidirec = false;
+		conn.from = knowledge;
+		conn.to = plan;
+		conn.efrom = knowledge_events.select( ev | ev.name == (v.name + "_Plan") ).first();
+		conn.eto = plan_events.select( ev | ev.name == v.name ).first;
+		result.add(conn);
+		
+		// get_var_ext connection
+		var conn = new RoboChart!Connection;
+		conn.`async` = false;
+		conn.bidirec = false;
+		conn.from = plan;
+		conn.to = knowledge;
+		conn.efrom = plan_events.select( ev | ev.name == ("get_" + v.name) ).first();
+		conn.eto = knowledge_events.select( ev | ev.name == ("get_" + v.name + "_Plan") ).first();
+		result.add(conn);
+	}
+	
+	var arvrs = amptn.analyse.asSet().collect( a | a.analysisResults ).flatten();
+	for (v in arvrs) {
+		// var_ext connection
+		var conn = new RoboChart!Connection;
+		conn.`async` = false;
+		conn.bidirec = false;
+		conn.from = knowledge;
+		conn.to = plan;
+		conn.efrom = knowledge_events.select( ev | ev.name == (v.name + "_Plan") ).first();
+		conn.eto = plan_events.select( ev | ev.name == v.name ).first;
+		result.add(conn);
+		
+		// get_var_ext connection
+		var conn = new RoboChart!Connection;
+		conn.`async` = false;
+		conn.bidirec = false;
+		conn.from = plan;
+		conn.to = knowledge;
+		conn.efrom = plan_events.select( ev | ev.name == ("get_" + v.name) ).first();
+		conn.eto = knowledge_events.select( ev | ev.name == ("get_" + v.name + "_Plan") ).first();
+		result.add(conn);
+	}
+	
+	var vivrs = amptn.legitimate.asSet().collect( a | a.verificationInfo ).flatten();
+	for (v in vivrs) {
+		// var_ext connection
+		var conn = new RoboChart!Connection;
+		conn.`async` = false;
+		conn.bidirec = false;
+		conn.from = knowledge;
+		conn.to = plan;
+		conn.efrom = knowledge_events.select( ev | ev.name == (v.name + "_Plan") ).first();
+		conn.eto = plan_events.select( ev | ev.name == v.name ).first;
+		result.add(conn);
+		
+		// get_var_ext connection
+		var conn = new RoboChart!Connection;
+		conn.`async` = false;
+		conn.bidirec = false;
+		conn.from = plan;
+		conn.to = knowledge;
+		conn.efrom = plan_events.select( ev | ev.name == ("get_" + v.name) ).first();
+		conn.eto = knowledge_events.select( ev | ev.name == ("get_" + v.name + "_Plan") ).first();
+		result.add(conn);
+	}
+	
+	return result;
+}
+
+operation MAPLEKLegitimateKnowledgeConnections(legitimate: RoboChart!StateMachineRef, knowledge: RoboChart!StateMachineRef, amptn: RoboArch!MAPLEK): Sequence(RoboChart!Connection) {
+	var knowledge_events = knowledge.ref.interfaces.collect( iface | iface.events ).flatten();
+	var legitimate_events = legitimate.ref.interfaces.collect( iface | iface.events ).flatten();
+	var result = Sequence {};
+	
+	var vivrs = amptn.legitimate.asSet().collect( a | a.verificationInfo ).flatten();
+	for (v in vivrs) {
+		// var_ext connection
+		var conn = new RoboChart!Connection;
+		conn.`async` = false;
+		conn.bidirec = false;
+		conn.from = knowledge;
+		conn.to = legitimate;
+		conn.efrom = knowledge_events.select( ev | ev.name == v.name ).first();
+		conn.eto = legitimate_events.select( ev | ev.name == v.name ).first;
+		result.add(conn);
+		
+		// get_var_ext connection
+		var conn = new RoboChart!Connection;
+		conn.`async` = false;
+		conn.bidirec = false;
+		conn.from = legitimate;
+		conn.to = knowledge;
+		conn.efrom = legitimate_events.select( ev | ev.name == ("get_" + v.name) ).first();
+		conn.eto = knowledge_events.select( ev | ev.name == ("get_" + v.name) ).first();
+		result.add(conn);
+		
+		// set_var_ext connection
+		var conn = new RoboChart!Connection;
+		conn.`async` = false;
+		conn.bidirec = false;
+		conn.from = legitimate;
+		conn.to = knowledge;
+		conn.efrom = legitimate_events.select( ev | ev.name == ("set_" + v.name) ).first();
+		conn.eto = knowledge_events.select( ev | ev.name == ("set_" + v.name) ).first();
+		result.add(conn);
+	}
+	
+	var rdvrs = amptn.monitor.recordedData;
+	for (v in rdvrs) {
+		// var_ext connection
+		var conn = new RoboChart!Connection;
+		conn.`async` = false;
+		conn.bidirec = false;
+		conn.from = knowledge;
+		conn.to = legitimate;
+		conn.efrom = knowledge_events.select( ev | ev.name == (v.name + "_Legitimate") ).first();
+		conn.eto = legitimate_events.select( ev | ev.name == v.name ).first;
+		result.add(conn);
+		
+		// get_var_ext connection
+		var conn = new RoboChart!Connection;
+		conn.`async` = false;
+		conn.bidirec = false;
+		conn.from = legitimate;
+		conn.to = knowledge;
+		conn.efrom = legitimate_events.select( ev | ev.name == ("get_" + v.name) ).first();
+		conn.eto = knowledge_events.select( ev | ev.name == ("get_" + v.name + "_Legitimate") ).first();
+		result.add(conn);
+	}
+	
+	var arvrs = amptn.analyse.asSet().collect( a | a.analysisResults ).flatten();
+	for (v in arvrs) {
+		// var_ext connection
+		var conn = new RoboChart!Connection;
+		conn.`async` = false;
+		conn.bidirec = false;
+		conn.from = knowledge;
+		conn.to = legitimate;
+		conn.efrom = knowledge_events.select( ev | ev.name == (v.name + "_Legitimate") ).first();
+		conn.eto = legitimate_events.select( ev | ev.name == v.name ).first;
+		result.add(conn);
+		
+		// get_var_ext connection
+		var conn = new RoboChart!Connection;
+		conn.`async` = false;
+		conn.bidirec = false;
+		conn.from = legitimate;
+		conn.to = knowledge;
+		conn.efrom = legitimate_events.select( ev | ev.name == ("get_" + v.name) ).first();
+		conn.eto = knowledge_events.select( ev | ev.name == ("get_" + v.name + "_Legitimate") ).first();
+		result.add(conn);
+	}
+	
+	var pdvrs = amptn.plan.asSet().collect( a | a.planData ).flatten();
+	for (v in pdvrs) {
+		// var_ext connection
+		var conn = new RoboChart!Connection;
+		conn.`async` = false;
+		conn.bidirec = false;
+		conn.from = knowledge;
+		conn.to = legitimate;
+		conn.efrom = knowledge_events.select( ev | ev.name == (v.name + "_Legitimate") ).first();
+		conn.eto = legitimate_events.select( ev | ev.name == v.name ).first;
+		result.add(conn);
+		
+		// get_var_ext connection
+		var conn = new RoboChart!Connection;
+		conn.`async` = false;
+		conn.bidirec = false;
+		conn.from = legitimate;
+		conn.to = knowledge;
+		conn.efrom = legitimate_events.select( ev | ev.name == ("get_" + v.name) ).first();
+		conn.eto = knowledge_events.select( ev | ev.name == ("get_" + v.name + "_Legitimate") ).first();
+		result.add(conn);
+	}
+	
+	return result;
+}
+
+operation MAPLEKExecuteKnowledgeConnections(execute: RoboChart!StateMachineRef, knowledge: RoboChart!StateMachineRef, amptn: RoboArch!MAPLEK): Sequence(RoboChart!Connection) {
+	var knowledge_events = knowledge.ref.interfaces.collect( iface | iface.events ).flatten();
+	var execute_events = execute.ref.interfaces.collect( iface | iface.events ).flatten();
+	var result = Sequence {};
+	
+	var pdvrs = amptn.plan.asSet().collect( a | a.planData ).flatten();
+	for (v in pdvrs) {
+		// var_ext connection
+		var conn = new RoboChart!Connection;
+		conn.`async` = false;
+		conn.bidirec = false;
+		conn.from = knowledge;
+		conn.to = execute;
+		conn.efrom = knowledge_events.select( ev | ev.name == (v.name + "_Execute") ).first();
+		conn.eto = execute_events.select( ev | ev.name == v.name ).first;
+		result.add(conn);
+		
+		// get_var_ext connection
+		var conn = new RoboChart!Connection;
+		conn.`async` = false;
+		conn.bidirec = false;
+		conn.from = execute;
+		conn.to = knowledge;
+		conn.efrom = execute_events.select( ev | ev.name == ("get_" + v.name) ).first();
+		conn.eto = knowledge_events.select( ev | ev.name == ("get_" + v.name + "_Execute") ).first();
+		result.add(conn);
+	}
+	
+	return result;
+}

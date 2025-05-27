@@ -1,0 +1,161 @@
+/********************************************************************************
+ * Copyright (c) 2025 University of York and others
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0.
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ *
+ * Contributors:
+ *   James Baxter - initial definition
+ ********************************************************************************/
+
+import "../common/RoboChart.eol";
+import "../patterns/MAPLEK/MAPLEK-interfaces.eol";
+
+
+@lazy
+rule MAPLEKLayerToTypes
+	transform amrsl: RoboArch!PlanningLayer
+	to rctyp: Set(TypeDecl) {
+		guard : amrsl.pattern.isTypeOf( RoboArch!MAPLEK )
+
+		printDebug("Start");
+
+		// a MAPLEK layer doesn't add new type declarations
+	}
+
+@lazy
+rule MAPLEKLayerToFunctions
+	transform amrsl: RoboArch!PlanningLayer
+	to rcfun: Set(RoboChart!Function) {
+		guard : amrsl.pattern.isTypeOf( RoboArch!MAPLEK )
+
+		printDebug("Start");
+		
+		// a MAPLEK layer doesn't add new functions
+	}
+ 
+
+//////////////////////////////////
+// State Machines & Connections //
+//////////////////////////////////
+
+@lazy
+rule MAPLEKLayerToStateMachinesAndConnections
+	transform amrsl: RoboArch!PlanningLayer
+	to rcstms: Sequence(RoboChart!StateMachine), rccons: Sequence(RoboChart!Connection), rcimprts: Sequence(RoboChart!Import) {
+	
+		guard : amrsl.pattern.isTypeOf( RoboArch!MAPLEK )
+		
+		printDebug("Start");
+		
+		var result;
+		if (amrsl.pattern.legitimate == null) {
+			if (amrsl.pattern.plan == null) {
+				if (amrsl.pattern.analyse == null) {
+					result = MEKMachinesAndConnections(amrsl);
+				} else {
+					result = MAEKMachinesAndConnections(amrsl);
+				}
+			} else {
+				if (amrsl.pattern.analyse == null) {
+					result = MPEKMachinesAndConnections(amrsl);
+				} else {
+					result = MAPEKMachinesAndConnections(amrsl);
+				}
+			}
+		} else {
+			if (amrsl.pattern.analyse == null) {
+				result = MPLEKMachinesAndConnections(amrsl);
+			} else {
+				result = MAPLEKMachinesAndConnections(amrsl);
+			}
+		}
+		rcstms.addAll(result.machines);
+		rccons.addAll(result.connections);
+		rcimprts.addAll(result.imports);
+	}
+	
+////////////////
+// Interfaces //
+////////////////
+	
+@lazy
+rule MAPLEKLayerToInterface
+	transform amrsl: RoboArch!PlanningLayer
+	to rcrsi: Sequence(RoboChart!Interface) {
+	
+		guard : amrsl.pattern.isTypeOf( RoboArch!MAPLEK )
+		
+		printDebug("Start");
+
+		var externalInterface = new RoboChart!Interface;
+		externalInterface.name = InterfacePrefix() + amrsl.name.toLowerCase().firstToUpperCase();
+		externalInterface.events.addAll(amrsl.inputs.equivalent());
+		externalInterface.events.addAll(amrsl.outputs.equivalent());
+
+		rcrsi.add(externalInterface);
+		
+		// Inputs
+		var inputsIface = new RoboChart!Interface;
+		inputsIface.name = amrsl.name.toLowerCase().firstToUpperCase() + "_Inputs";
+		for (ev in amrsl.pattern.monitor.inputs) {
+			var newEv = CreateRCEvent(ev.name, ev.type.clone());
+			inputsIface.events.add(newEv);
+		}	
+		rcrsi.add(inputsIface);
+		
+		// Outputs
+		var outputsIface = new RoboChart!Interface;
+		outputsIface.name = amrsl.name.toLowerCase().firstToUpperCase() + "_Outputs";
+		for (ev in amrsl.pattern.execute.outputs) {
+			var newEv = CreateRCEvent(ev.name, ev.type.clone());
+			outputsIface.events.add(newEv);
+		}
+		rcrsi.add(outputsIface);
+		
+		// InputVars
+		var inputVarsIface = new RoboChart!Interface;
+		inputVarsIface.name = amrsl.name.toLowerCase().firstToUpperCase() + "_InputVars";
+		for (ev in amrsl.pattern.monitor.inputs) {
+			var vl = new RoboChart!VariableList;
+			vl.modifier = RoboChart!VariableModifier#VAR;
+			var newVar = CreateRCVariable(ev.name + "_data", ev.type.clone());
+			vl.vars.add(newVar);
+			inputVarsIface.variableList.add(vl);
+		}
+		rcrsi.add(inputVarsIface);
+		
+		// InputFlags
+		var inputFlagsIface = new RoboChart!Interface;
+		inputFlagsIface.name = amrsl.name.toLowerCase().firstToUpperCase() + "_InputFlags";
+		for (ev in amrsl.pattern.monitor.inputs) {
+			var vl = new RoboChart!VariableList;
+			vl.modifier = RoboChart!VariableModifier#VAR;
+			var newVar = new RoboChart!Variable;
+			newVar.name = ev.name + "_flag";
+			newVar.type = new RoboChart!TypeRef;
+			newVar.type.ref = rc_type("boolean");
+			vl.vars.add(newVar);
+			inputFlagsIface.variableList.add(vl);
+		}
+		rcrsi.add(inputFlagsIface);
+		
+		// add interfaces of MAPLE-K layer from rules
+		var name = amrsl.name.toLowerCase().firstToUpperCase();
+		var pat = amrsl.pattern;
+		rcrsi.addAll( RecordedDataInterfaces( pat.monitor.recordedData, pat, name ) );
+		if (pat.analyse != null) {
+			rcrsi.addAll( AnalysisResultsInterfaces(pat.analyse.analysisResults, pat, name) );
+		}
+		if (pat.plan != null) {
+			rcrsi.addAll( PlanDataInterfaces(pat.plan.planData, pat, name) );
+		}
+		if (pat.legitimate != null) {
+			rcrsi.addAll( VerificationInfoInterfaces(pat.legitimate.verificationInfo, pat, name) );
+		}
+		
+	}
+	

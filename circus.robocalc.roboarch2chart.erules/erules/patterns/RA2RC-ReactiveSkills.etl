@@ -141,53 +141,52 @@ rule ReactiveSkillsLayerToInterface
 //	}
 
 @lazy
-rule ReactiveSkillsLayerToController
+rule ReactiveSkillsLayerToStateMachinesAndConnections
 	transform amrsl: RoboArch!ControlLayer
-	to rcrsc: RoboChart!ControllerRef {
+	to rcstms: Set(RoboChart!StateMachine), rccons: Set(RoboChart!Connection), rcimprts: Set(RoboChart!Import) {
 
 		guard : amrsl.pattern.isTypeOf( RoboArch!ReactiveSkills )
 
 		printDebug("Start");
 
-		var controller = new RoboChart!ControllerDef;
+//		var controller = new RoboChart!ControllerDef;
+//
+//		//name
+//		var amrslFormattedName = amrsl.name.toLowerCase().firstToUpperCase();
+//		controller.name =  amrslFormattedName;
+//		rcrsc.populateControllerRef(controller);
 
-		//name
-		var amrslFormattedName = amrsl.name.toLowerCase().firstToUpperCase();
-		controller.name =  amrslFormattedName;
-		rcrsc.populateControllerRef(controller);
-
-		//interfaces
- 		controller.interfaces.add( ref( InterfacePrefix() + amrslFormattedName, RoboChart!Interface ) ); //Layer external
-
- 		for (skl: RoboArch!DSkill in amrsl.pattern.skills){ // Platform
- 			controller.interfaces.add( ref( InterfacePrefix() + skl.name + PlatformSensingPostfix(), RoboChart!Interface) );
- 			controller.interfaces.add( ref( InterfacePrefix() + skl.name + PlatformActuationPostfix(), RoboChart!Interface) );
- 		}
+//		//interfaces
+// 		controller.interfaces.add( ref( InterfacePrefix() + amrslFormattedName, RoboChart!Interface ) ); //Layer external
+//
+// 		for (skl: RoboArch!DSkill in amrsl.pattern.skills){ // Platform
+// 			controller.interfaces.add( ref( InterfacePrefix() + skl.name + PlatformSensingPostfix(), RoboChart!Interface) );
+// 			controller.interfaces.add( ref( InterfacePrefix() + skl.name + PlatformActuationPostfix(), RoboChart!Interface) );
+// 		}
 
 		//machines
 		for (skl: RoboArch!Skill in amrsl.pattern.skills) {
-			controller.machines.add( SkillToStateMachine(skl) );
+			rcstms.add( SkillToStateMachine(skl) );
 		}
 
-		controller.machines.add( SkillsManagerToStateMachine( amrsl.pattern.skillsManager, amrsl.pattern.skills) );
+		rcstms.add( SkillsManagerToStateMachine( amrsl.pattern.skillsManager, amrsl.pattern.skills) );
 
 
 		//Connections
-		controller.connections =  SkillsManagerToConnections( Set{amrsl} );
+		rccons =  SkillsManagerToConnections( Set{amrsl} );
 
 
 
-		//Create and populate the layer package
-		var package = new RoboChart!RCPackage;
-		package.imports.add( getPackageImport(DefinitionsName()) );
-		package.imports.add( getPackageImport(SkillsManagerName()) );
+		//imports
+		rcimprts.add( getPackageImport(DefinitionsName()) );
+		rcimprts.add( getPackageImport(SkillsManagerName()) );
 
 		for (skl : RoboArch!Skill in amrsl.pattern.skills){
-			package.imports.add( getPackageImport(skl.name) );
+			rcimprts.add( getPackageImport(skl.name) );
 		}
 
-		package.name = amrsl.name.toLowerCase().firstToUpperCase();
-		package.controllers.add(controller);
+//		package.name = amrsl.name.toLowerCase().firstToUpperCase();
+//		package.controllers.add(controller);
 	}
 
 

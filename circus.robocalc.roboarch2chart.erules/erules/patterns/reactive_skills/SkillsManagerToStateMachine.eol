@@ -12,7 +12,6 @@
  ********************************************************************************/
 
 import "../../common/Common.eol";
-import "../../common/RA2RC-Common.eol";
 import "../../common/RA2RC-Functions.eol";
 import "../../common/RA2RC-ReactiveSkills.eol";
 import "../../common/RoboChart.eol";

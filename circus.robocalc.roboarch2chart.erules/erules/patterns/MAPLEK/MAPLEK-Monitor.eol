@@ -1,0 +1,192 @@
+/********************************************************************************
+ * Copyright (c) 2025 University of York and others
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0.
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ *
+ * Contributors:
+ *   James Baxter - initial definition
+ ********************************************************************************/
+
+import "../../common/RoboChart.eol";
+
+operation MonitorStateMachine(monitor: RoboArch!MonitorComponent, amptn: RoboArch!MAPLEK, lyrName: String): RoboChart!StateMachineDef {
+	var result = new RoboChart!StateMachineDef;
+	
+	result.name = lyrName + "_Monitor";
+	
+	// make outputData variable
+	var vl = new RoboChart!VariableList;
+	vl.modifier = RoboChart!VariableModifier#VAR;
+	var outputData = CreateRCVariable("outputData", monitor.processedDataType.clone());
+	vl.vars.add(outputData);
+	result.variableList.add(vl);
+	
+	// make dataToSend variable
+	var vl = new RoboChart!VariableList;
+	vl.modifier = RoboChart!VariableModifier#VAR;
+	var dataToSend = CreateRCVariable("dataToSend", RCTypeDefToRef(rc_type("boolean")));
+	vl.vars.add(dataToSend);
+	result.variableList.add(vl);
+	
+	// make processedData event
+	var processedData = CreateRCEvent("processedData", monitor.processedDataType.clone());
+	result.events.add(processedData);
+	
+	// add Inputs interface
+	var InputsIface = ref(lyrName + "_Inputs", RoboChart!Interface);
+	result.interfaces.add(InputsIface);
+	// add InputVars interface
+	var InputVarsIface = ref(lyrName + "_InputVars", RoboChart!Interface);
+	result.interfaces.add(InputVarsIface);
+	// add InputFlags interface
+	var InputFlagsIface = ref(lyrName + "_InputFlags", RoboChart!Interface);
+	result.interfaces.add(InputFlagsIface);
+	// add RecordedData_events interface
+	var RecordedDataEventsIface = ref(lyrName + "_RecordedData_events", RoboChart!Interface);
+	result.interfaces.add(RecordedDataEventsIface);
+	// add RecordedData_set_events interface
+	var RecordedDataSetEventsIface = ref(lyrName + "_RecordedData_set_events", RoboChart!Interface);
+	result.interfaces.add(RecordedDataSetEventsIface);
+
+	// create states and junctions
+	var i0 = new RoboChart!Initial;
+	i0.name = "i0";
+	result.nodes.add(i0);
+	
+	var Initialise = new RoboChart!State;
+	Initialise.name = "Initialise";
+	result.nodes.add(Initialise);
+	
+	var ReadInput = new RoboChart!State;
+	ReadInput.name = "ReadInput";
+	result.nodes.add(ReadInput);
+	
+	var ProcessData = new RoboChart!State;
+	ProcessData.name = "ProcessData";
+	result.nodes.add(ProcessData);
+	
+	var RecordData = new RoboChart!State;
+	RecordData.name = "RecordData";
+	result.nodes.add(RecordData);
+	
+	var j0 = new RoboChart!Junction;
+	j0.name = "j0";
+	result.nodes.add(j0);
+	
+	var SendData = new RoboChart!State;
+	SendData.name = "SendData";
+	result.nodes.add(SendData);
+	
+	// create transitions
+	var t = new RoboChart!Transition;
+	t.name = "t0";
+	t.source = i0;
+	t.target = Initialise;
+	result.transitions.add(t);
+	
+	var t = new RoboChart!Transition;
+	t.name = "t1";
+	t.source = Initialise;
+	t.target = ReadInput;
+	result.transitions.add(t);
+	
+	for (input in InputsIface.events) {
+		var t = new RoboChart!Transition;
+		t.name = "t2_" + input.name;
+		t.source = ReadInput;
+		t.target = ProcessData;
+		
+		// trigger: input?input_data
+		var trigger = new RoboChart!Communication;
+		trigger.event = input;
+		trigger._type = RoboChart!CommunicationType#INPUT;
+		var input_data = InputVarsIface.variableList.collect( vl | vl.vars).flatten().select( v | v.name == (input.name + "_data")).first();
+		trigger.parameter = input_data;
+		t.trigger = trigger;
+		
+		// action: input_received = true
+		var action = new RoboChart!Assignment;
+		action.left = new RoboChart!VarRef;
+		action.left.name = InputFlagsIface.variableList.collect( vl | vl.vars).flatten().select( v | v.name == (input.name + "_flag")).first();
+		action.right = new RoboChart!BooleanExp;
+		action.right.value = "true";
+		t.action = action;
+		
+		result.transitions.add(t);
+	}
+	
+	var t = new RoboChart!Transition;
+	t.name = "t3";
+	t.source = ProcessData;
+	t.target = RecordData;
+	result.transitions.add(t);
+	
+	var t = new RoboChart!Transition;
+	t.name = "t4";
+	t.source = RecordData;
+	t.target = j0;
+	result.transitions.add(t);
+	
+	var t = new RoboChart!Transition;
+	t.name = "t5";
+	t.source = j0;
+	t.target = SendData;
+	// guard: dataToSend
+	var condition = new RoboChart!RefExp;
+	condition.ref = dataToSend;
+	t.condition = condition;
+	result.transitions.add(t);
+	
+	var t = new RoboChart!Transition;
+	t.name = "t6";
+	t.source = j0;
+	t.target = ReadInput;
+	// guard: not dataToSend
+	var condition = new RoboChart!Not;
+	condition.exp = new RoboChart!RefExp;
+	condition.exp.ref = dataToSend;
+	t.condition = condition;
+	result.transitions.add(t);
+	
+	var t = new RoboChart!Transition;
+	t.name = "t7";
+	t.source = SendData;
+	t.target = ReadInput;
+	// action: processedData!outputData; dataToSend = false
+	var action = new RoboChart!SeqStatement;
+	action.statements = Sequence {};
+	// action1: processedData!outputData
+	var action1 = new RoboChart!CommunicationStmt;
+	action1.communication = new RoboChart!Communication;
+	action1.communication.event = processedData;
+	action1.communication._type = RoboChart!CommunicationType#OUTPUT;
+	action1.communication.value = new RefExp;
+	action1.communication.value.ref = outputData;
+	action.statements.add(action1);
+	// action2: dataToSend = false
+	var action2 = new RoboChart!Assignment;
+	action2.left = new RoboChart!VarRef;
+	action2.left.name = dataToSend;
+	action2.right = new RoboChart!BooleanExp;
+	action2.right.value = "false";
+	action.statements.add(action2);
+	t.action = action;
+	result.transitions.add(t);
+	
+	// make state machine package
+	var rcpkg = new RoboChart!RCPackage;
+	rcpkg.name = result.name;
+	rcpkg.machines = Set{};
+	rcpkg.machines.add(result);
+	
+	var packageImport = new RoboChart!Import;
+	packageImport.importedNamespace = DefinitionsName() + rc_importall();
+	printDebug(rcpkg.name + ": adding import of " + packageImport.importedNamespace);
+	rcpkg.imports.add( packageImport );
+	
+	return result;
+}
